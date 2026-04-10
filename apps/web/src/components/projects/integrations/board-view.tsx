@@ -175,6 +175,7 @@ export function BoardView({
 		setDraggingId(taskId);
 		e.dataTransfer.effectAllowed = "move";
 		e.dataTransfer.setData("text/plain", taskId);
+		e.dataTransfer.setData("application/x-paca-task-id", taskId);
 	};
 
 	const handleDragEnd = () => {

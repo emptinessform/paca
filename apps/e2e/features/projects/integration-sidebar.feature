@@ -258,3 +258,54 @@ Feature: Sidebar integration navigation
       When the user clicks the "New sprint" button in the Integrations section
       Then the "Integrations" section should remain expanded
       And the sprint creation dialog should be open
+
+  @authenticated
+  Rule: Dragging a task onto a sidebar integration entry reassigns its sprint
+
+    Background:
+      Given the user already has a stored authenticated session
+      And a project named "E2E_DRAG_SPRINT_PROJECT" exists
+      And the project has a "Product Backlog" integration
+      And the project has an active sprint named "E2E_TARGET_SPRINT"
+      And the project has an active sprint named "E2E_SOURCE_SPRINT"
+      And the user has the "View Sprints" project permission in "E2E_DRAG_SPRINT_PROJECT"
+      And the user has the "Edit Tasks" project permission in "E2E_DRAG_SPRINT_PROJECT"
+      And the user has navigated to the "E2E_SOURCE_SPRINT" board view inside "E2E_DRAG_SPRINT_PROJECT"
+
+    Scenario: Dragging a task card onto a sprint sidebar entry moves the task into that sprint
+      Given the integration has a task "E2E_MOVE_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user drags the task card "E2E_MOVE_TASK" onto the "E2E_TARGET_SPRINT" sidebar entry
+      Then the task "E2E_MOVE_TASK" should no longer appear in the "E2E_SOURCE_SPRINT" view
+      And the task "E2E_MOVE_TASK" should appear in the "E2E_TARGET_SPRINT" view
+
+    Scenario: Dragging a task row from the table view onto a sprint sidebar entry moves the task
+      Given the user has navigated to the "E2E_SOURCE_SPRINT" table view inside "E2E_DRAG_SPRINT_PROJECT"
+      And the integration has a task "E2E_TABLE_MOVE_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user drags the task row "E2E_TABLE_MOVE_TASK" onto the "E2E_TARGET_SPRINT" sidebar entry
+      Then the task "E2E_TABLE_MOVE_TASK" should appear in the "E2E_TARGET_SPRINT" view
+
+    Scenario: Dragging a task onto the "Product Backlog" sidebar entry removes it from its sprint
+      Given the integration has a task "E2E_BACKLOG_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user drags the task card "E2E_BACKLOG_TASK" onto the "Product Backlog" sidebar entry
+      Then the task "E2E_BACKLOG_TASK" should no longer appear in the "E2E_SOURCE_SPRINT" view
+      And the task "E2E_BACKLOG_TASK" should appear in the "Product Backlog" view
+
+    Scenario: The sprint sidebar entry highlights as a drop target when a task is dragged over it
+      Given the integration has a task "E2E_HOVER_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user starts dragging the task card "E2E_HOVER_TASK"
+      And the user hovers the dragged task over the "E2E_TARGET_SPRINT" sidebar entry
+      Then the "E2E_TARGET_SPRINT" sidebar entry should display a visual drop-target highlight
+
+    Scenario: The drop-target highlight is removed when the task is dragged away from the entry
+      Given the integration has a task "E2E_LEAVE_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user starts dragging the task card "E2E_LEAVE_TASK"
+      And the user hovers the dragged task over the "E2E_TARGET_SPRINT" sidebar entry
+      And the user moves the dragged task away from the "E2E_TARGET_SPRINT" sidebar entry
+      Then the "E2E_TARGET_SPRINT" sidebar entry should no longer show the drop-target highlight
+
+    Scenario: User without "Edit Tasks" permission cannot reassign a task via sidebar drag
+      Given the user does not have the "Edit Tasks" project permission
+      And the integration has a task "E2E_READONLY_DRAG_TASK" in sprint "E2E_SOURCE_SPRINT"
+      When the user attempts to drag "E2E_READONLY_DRAG_TASK" onto the "E2E_TARGET_SPRINT" sidebar entry
+      Then the drag operation should not be accepted by the sidebar entry
+      And the task "E2E_READONLY_DRAG_TASK" should remain in "E2E_SOURCE_SPRINT"

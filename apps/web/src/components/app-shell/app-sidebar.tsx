@@ -18,7 +18,7 @@ import {
 	Sun,
 	Users,
 } from "lucide-react";
-import { type ComponentType, useRef, useState } from "react";
+import { type ComponentType, useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,11 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import type { ThemeMode } from "@/hooks/use-theme-mode";
 import { useThemeMode } from "@/hooks/use-theme-mode";
-import { createSprint, sprintsQueryOptions } from "@/lib/integration-api";
+import {
+	createSprint,
+	sprintsQueryOptions,
+	updateTask,
+} from "@/lib/integration-api";
 import { projectQueryOptions, projectsQueryOptions } from "@/lib/project-api";
 import { cn } from "@/lib/utils";
 
@@ -291,6 +295,69 @@ function ProjectIntegrationsSection({ projectId }: { projectId: string }) {
 
 	const canViewSprints = hasPermission("sprints.read");
 	const canCreateSprint = hasPermission("sprints.write");
+	const canEditTasks = hasPermission("tasks.write");
+
+	const [dragOverIntegrationId, setDragOverIntegrationId] = useState<
+		string | null
+	>(null);
+
+	// Clear the drop-target highlight whenever any drag ends (covers drag-cancel
+	// and mouse-release outside a valid target, where dragleave may not fire).
+	useEffect(() => {
+		const handleDragEnd = () => setDragOverIntegrationId(null);
+		document.addEventListener("dragend", handleDragEnd);
+		return () => document.removeEventListener("dragend", handleDragEnd);
+	}, []);
+
+	const updateSprintMutation = useMutation({
+		mutationFn: ({
+			taskId,
+			sprintId,
+		}: {
+			taskId: string;
+			sprintId: string | null;
+		}) => updateTask(projectId, taskId, { sprint_id: sprintId }),
+		onSuccess: () => {
+			qc.invalidateQueries({
+				queryKey: ["projects", projectId, "backlog-tasks"],
+			});
+			qc.invalidateQueries({ queryKey: ["projects", projectId, "sprints"] });
+		},
+	});
+
+	const handleIntegrationDragOver = (
+		e: React.DragEvent,
+		integrationId: string,
+	) => {
+		if (!canEditTasks) return;
+		if (!e.dataTransfer.types.includes("application/x-paca-task-id")) return;
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+		setDragOverIntegrationId(integrationId);
+	};
+
+	const handleIntegrationDragLeave = (e: React.DragEvent) => {
+		// Clear whenever leaving the item. If the cursor moves to a child element
+		// within the same item, dragover immediately re-fires on the parent and
+		// restores the highlight, so the brief gap is imperceptible.
+		if (
+			!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)
+		) {
+			setDragOverIntegrationId(null);
+		}
+	};
+
+	const handleIntegrationDrop = (
+		e: React.DragEvent,
+		sprintId: string | null,
+	) => {
+		e.preventDefault();
+		setDragOverIntegrationId(null);
+		if (!canEditTasks) return;
+		const taskId = e.dataTransfer.getData("text/plain");
+		if (!taskId) return;
+		updateSprintMutation.mutate({ taskId, sprintId });
+	};
 
 	const { data: sprints = [] } = useQuery({
 		...sprintsQueryOptions(projectId),
@@ -375,7 +442,11 @@ function ProjectIntegrationsSection({ projectId }: { projectId: string }) {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{/* Product Backlog — always shown */}
-							<SidebarMenuItem>
+							<SidebarMenuItem
+								onDragOver={(e) => handleIntegrationDragOver(e, "backlog")}
+								onDragLeave={handleIntegrationDragLeave}
+								onDrop={(e) => handleIntegrationDrop(e, null)}
+							>
 								<SidebarMenuButton
 									isActive={isBacklogActive}
 									tooltip="Product Backlog"
@@ -385,6 +456,8 @@ function ProjectIntegrationsSection({ projectId }: { projectId: string }) {
 										isBacklogActive
 											? "bg-primary/10 text-primary font-medium before:absolute before:left-0 before:inset-y-2 before:w-0.75 before:rounded-full before:bg-primary"
 											: "hover:bg-sidebar-accent/60",
+										dragOverIntegrationId === "backlog" &&
+											"ring-2 ring-primary/40 bg-primary/5 text-primary",
 									)}
 								>
 									<BookOpen className="size-4" />
@@ -397,7 +470,12 @@ function ProjectIntegrationsSection({ projectId }: { projectId: string }) {
 								const sprintHref = `/projects/${projectId}/integrations/sprints/${sprint.id}`;
 								const isActive = location.startsWith(sprintHref);
 								return (
-									<SidebarMenuItem key={sprint.id}>
+									<SidebarMenuItem
+										key={sprint.id}
+										onDragOver={(e) => handleIntegrationDragOver(e, sprint.id)}
+										onDragLeave={handleIntegrationDragLeave}
+										onDrop={(e) => handleIntegrationDrop(e, sprint.id)}
+									>
 										<SidebarMenuButton
 											isActive={isActive}
 											tooltip={sprint.name}
@@ -407,6 +485,8 @@ function ProjectIntegrationsSection({ projectId }: { projectId: string }) {
 												isActive
 													? "bg-primary/10 text-primary font-medium before:absolute before:left-0 before:inset-y-2 before:w-0.75 before:rounded-full before:bg-primary"
 													: "hover:bg-sidebar-accent/60",
+												dragOverIntegrationId === sprint.id &&
+													"ring-2 ring-primary/40 bg-primary/5 text-primary",
 											)}
 										>
 											<KanbanSquare className="size-4" />

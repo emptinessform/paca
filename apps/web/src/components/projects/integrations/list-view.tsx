@@ -271,6 +271,7 @@ function StatusGroup({
 								onDragStart={(e) => {
 									e.dataTransfer.effectAllowed = "move";
 									e.dataTransfer.setData("text/plain", task.id);
+									e.dataTransfer.setData("application/x-paca-task-id", task.id);
 									e.dataTransfer.setData(
 										"application/x-source-status-id",
 										status.id,
