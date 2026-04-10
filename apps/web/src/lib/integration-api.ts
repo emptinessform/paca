@@ -120,7 +120,12 @@ export async function updateView(
 	projectId: string,
 	sprintId: string,
 	viewId: string,
-	payload: Partial<{ name: string; view_type: ViewType; config: ViewConfig; position: number }>,
+	payload: Partial<{
+		name: string;
+		view_type: ViewType;
+		config: ViewConfig;
+		position: number;
+	}>,
 ): Promise<IntegrationView> {
 	const { data } = await apiClient.instance.patch<
 		SuccessEnvelope<Omit<IntegrationView, "layout">>
@@ -161,7 +166,12 @@ export async function createBacklogView(
 export async function updateBacklogView(
 	projectId: string,
 	viewId: string,
-	payload: Partial<{ name: string; view_type: ViewType; config: ViewConfig; position: number }>,
+	payload: Partial<{
+		name: string;
+		view_type: ViewType;
+		config: ViewConfig;
+		position: number;
+	}>,
 ): Promise<IntegrationView> {
 	const { data } = await apiClient.instance.patch<
 		SuccessEnvelope<Omit<IntegrationView, "layout">>

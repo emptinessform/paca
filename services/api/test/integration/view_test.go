@@ -784,7 +784,7 @@ func TestIntegrationViews_Reorder(t *testing.T) {
 		var env struct {
 			Data map[string]any `json:"data"`
 		}
-		json.Unmarshal(body, &env)
+		_ = json.Unmarshal(body, &env)
 		pos, _ := env.Data["position"].(float64)
 		return int(pos)
 	}
@@ -898,7 +898,7 @@ func TestIntegrationBacklogViews_Reorder(t *testing.T) {
 		var env struct {
 			Data map[string]any `json:"data"`
 		}
-		json.Unmarshal(body, &env)
+		_ = json.Unmarshal(body, &env)
 		pos, _ := env.Data["position"].(float64)
 		return int(pos)
 	}

@@ -609,7 +609,7 @@ func TestViewService_ReorderViews_CountMismatch(t *testing.T) {
 
 	sprintID := uuid.New()
 	v1, _ := svc.CreateView(ctx, sprintdom.CreateViewInput{SprintID: uuidPtr(sprintID), Name: "A", ViewType: sprintdom.ViewTypeTable})
-	svc.CreateView(ctx, sprintdom.CreateViewInput{SprintID: uuidPtr(sprintID), Name: "B", ViewType: sprintdom.ViewTypeBoard})
+	_, _ = svc.CreateView(ctx, sprintdom.CreateViewInput{SprintID: uuidPtr(sprintID), Name: "B", ViewType: sprintdom.ViewTypeBoard})
 
 	// Only one ID provided for two views
 	err := svc.ReorderViews(ctx, sprintID, []uuid.UUID{v1.ID})
