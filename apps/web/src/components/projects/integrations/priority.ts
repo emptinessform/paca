@@ -11,6 +11,10 @@ export const PRIORITY_LABELS: Record<number, PriorityMeta> = {
 	4: { label: "Critical", color: "#ef4444" },
 };
 
+export const PRIORITY_LEVELS = Object.entries(PRIORITY_LABELS).map(
+	([value, meta]) => ({ value: Number(value), ...meta }),
+);
+
 export function getPriority(importance: number): PriorityMeta {
 	return PRIORITY_LABELS[Math.min(importance, 4)] ?? PRIORITY_LABELS[0];
 }

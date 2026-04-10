@@ -63,6 +63,10 @@ func (f *fakeTaskSvc) UpdateTaskType(_ context.Context, _ uuid.UUID, _ taskdom.U
 
 func (f *fakeTaskSvc) DeleteTaskType(_ context.Context, _ uuid.UUID) error { return nil }
 
+func (f *fakeTaskSvc) SetDefaultTaskType(_ context.Context, _, _ uuid.UUID) (*taskdom.TaskType, error) {
+	return &taskdom.TaskType{}, nil
+}
+
 // -- TaskStatusService --
 
 func (f *fakeTaskSvc) ListTaskStatuses(_ context.Context, _ uuid.UUID) ([]*taskdom.TaskStatus, error) {

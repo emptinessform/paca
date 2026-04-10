@@ -1,7 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { getTaskTypeIconComponent } from "@/components/projects/task-types/task-type-icons";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type Task, updateTask } from "@/lib/integration-api";
 import type { TaskStatus, TaskType } from "@/lib/project-api";
 import { cn } from "@/lib/utils";
@@ -18,20 +25,25 @@ interface BoardViewProps {
 	searchQuery: string;
 	assigneeFilter: string | null;
 	tasksQueryKey: unknown[];
-	onCreateTask: (statusId: string, title: string) => Promise<void>;
+	onCreateTask: (statusId: string, title: string, taskTypeId?: string | null) => Promise<void>;
 	onTaskClick: (task: Task) => void;
 	manualSort?: boolean;
 	onReorderTask?: (statusId: string, taskId: string, newIndex: number) => void;
 }
 
 interface ColumnAddProps {
-	onAdd: (title: string) => void;
+	taskTypes: TaskType[];
+	onAdd: (title: string, taskTypeId: string | null) => void;
 }
 
-function ColumnAddTask({ onAdd }: ColumnAddProps) {
+function ColumnAddTask({ taskTypes, onAdd }: ColumnAddProps) {
 	const [open, setOpen] = useState(false);
 	const [value, setValue] = useState("");
+	const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	const defaultType = taskTypes.find((tt) => tt.is_default) ?? taskTypes[0] ?? null;
+	const selectedType = taskTypes.find((tt) => tt.id === selectedTypeId) ?? defaultType;
 
 	const open_ = () => {
 		setOpen(true);
@@ -41,13 +53,15 @@ function ColumnAddTask({ onAdd }: ColumnAddProps) {
 	const submit = () => {
 		const title = value.trim();
 		if (!title) return;
-		onAdd(title);
+		onAdd(title, selectedType?.id ?? null);
 		setValue("");
+		setSelectedTypeId(null);
 		setOpen(false);
 	};
 
 	const cancel = () => {
 		setValue("");
+		setSelectedTypeId(null);
 		setOpen(false);
 	};
 
@@ -64,8 +78,57 @@ function ColumnAddTask({ onAdd }: ColumnAddProps) {
 		);
 	}
 
+	const SelectedIcon = getTaskTypeIconComponent(selectedType?.icon ?? null);
+
 	return (
 		<div className="rounded-lg border border-primary/40 bg-card p-2 shadow-xs">
+			<div className="flex items-center gap-1.5 mb-1.5">
+				{taskTypes.length > 0 && selectedType && (
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-muted/50 shrink-0"
+							style={selectedType.color ? { color: selectedType.color } : undefined}
+						>
+							{SelectedIcon ? (
+								<SelectedIcon className="size-3.5" />
+							) : (
+								<span className="text-[10px] font-semibold">{selectedType.name.slice(0, 2)}</span>
+							)}
+							<ChevronDown className="size-3 text-muted-foreground/60" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" className="w-40">
+							{taskTypes.map((tt) => {
+								const Icon = getTaskTypeIconComponent(tt.icon);
+								return (
+									<DropdownMenuItem
+										key={tt.id}
+										onClick={() => setSelectedTypeId(tt.id)}
+										className={cn(
+											"flex items-center gap-2 text-xs",
+											selectedType.id === tt.id && "bg-accent",
+										)}
+									>
+										{Icon ? (
+											<Icon
+												className="size-3.5 shrink-0"
+												style={tt.color ? { color: tt.color } : undefined}
+											/>
+										) : (
+											<span className="size-3.5 shrink-0 text-[10px] font-semibold">
+												{tt.name.slice(0, 2)}
+											</span>
+										)}
+										{tt.name}
+									</DropdownMenuItem>
+								);
+							})}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
+				<span className="text-xs text-muted-foreground/50 truncate">
+					{selectedType?.name ?? "Task"}
+				</span>
+			</div>
 			<input
 				ref={inputRef}
 				value={value}
@@ -328,7 +391,8 @@ export function BoardView({
 							))}
 							{canCreate && (
 								<ColumnAddTask
-									onAdd={(title) => onCreateTask(status.id, title)}
+									taskTypes={taskTypes}
+									onAdd={(title, typeId) => onCreateTask(status.id, title, typeId)}
 								/>
 							)}
 						</div>

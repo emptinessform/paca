@@ -86,6 +86,26 @@ func (r *fakeTaskRepo) DeleteTaskType(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *fakeTaskRepo) SetDefaultTaskType(_ context.Context, projectID, typeID uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	found := false
+	for _, t := range r.types {
+		if t.ProjectID == projectID {
+			if t.ID == typeID {
+				t.IsDefault = true
+				found = true
+			} else {
+				t.IsDefault = false
+			}
+		}
+	}
+	if !found {
+		return taskdom.ErrTypeNotFound
+	}
+	return nil
+}
+
 // -- TaskStatus methods --
 
 func (r *fakeTaskRepo) ListTaskStatuses(_ context.Context, projectID uuid.UUID) ([]*taskdom.TaskStatus, error) {
@@ -304,6 +324,69 @@ func TestDeleteTaskType_OK(t *testing.T) {
 	_, err := svc.GetTaskType(ctx, tt.ID)
 	if err != taskdom.ErrTypeNotFound {
 		t.Errorf("expected ErrTypeNotFound after delete, got %v", err)
+	}
+}
+
+func TestSetDefaultTaskType_OK(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTaskRepo()
+	svc := tasksvc.New(repo)
+	projectID := uuid.New()
+
+	tt1, _ := svc.CreateTaskType(ctx, taskdom.CreateTaskTypeInput{ProjectID: projectID, Name: "Task"})
+	tt2, _ := svc.CreateTaskType(ctx, taskdom.CreateTaskTypeInput{ProjectID: projectID, Name: "Bug"})
+
+	got, err := svc.SetDefaultTaskType(ctx, projectID, tt1.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.IsDefault {
+		t.Errorf("expected returned type to have IsDefault=true")
+	}
+
+	// The other type should have IsDefault=false.
+	other, _ := svc.GetTaskType(ctx, tt2.ID)
+	if other.IsDefault {
+		t.Errorf("expected %q to have IsDefault=false after SetDefaultTaskType", other.Name)
+	}
+}
+
+func TestSetDefaultTaskType_SwitchDefault(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTaskRepo()
+	svc := tasksvc.New(repo)
+	projectID := uuid.New()
+
+	tt1, _ := svc.CreateTaskType(ctx, taskdom.CreateTaskTypeInput{ProjectID: projectID, Name: "Task"})
+	tt2, _ := svc.CreateTaskType(ctx, taskdom.CreateTaskTypeInput{ProjectID: projectID, Name: "Bug"})
+
+	// Set tt1 as default first.
+	_, _ = svc.SetDefaultTaskType(ctx, projectID, tt1.ID)
+
+	// Then switch to tt2.
+	got, err := svc.SetDefaultTaskType(ctx, projectID, tt2.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.IsDefault {
+		t.Errorf("expected Bug to now be default")
+	}
+
+	// tt1 must no longer be default.
+	prev, _ := svc.GetTaskType(ctx, tt1.ID)
+	if prev.IsDefault {
+		t.Errorf("expected Task to no longer be default after switching to Bug")
+	}
+}
+
+func TestSetDefaultTaskType_NotFound(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTaskRepo()
+	svc := tasksvc.New(repo)
+
+	_, err := svc.SetDefaultTaskType(ctx, uuid.New(), uuid.New())
+	if err != taskdom.ErrTypeNotFound {
+		t.Errorf("expected ErrTypeNotFound, got %v", err)
 	}
 }
 

@@ -174,6 +174,7 @@ export interface TaskType {
 	icon?: string | null;
 	color?: string | null;
 	description?: string | null;
+	is_default?: boolean;
 	created_at: string;
 	updated_at: string;
 }
@@ -225,6 +226,16 @@ export async function deleteTaskType(
 	await apiClient.instance.delete(
 		`/projects/${projectId}/task-types/${typeId}`,
 	);
+}
+
+export async function setDefaultTaskType(
+	projectId: string,
+	typeId: string,
+): Promise<TaskType> {
+	const { data } = await apiClient.instance.put<SuccessEnvelope<TaskType>>(
+		`/projects/${projectId}/task-types/${typeId}/set-default`,
+	);
+	return data.data;
 }
 
 // ── Task Statuses ─────────────────────────────────────────────────────────────

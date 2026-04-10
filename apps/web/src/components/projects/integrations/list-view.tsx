@@ -1,6 +1,13 @@
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { getTaskTypeIconComponent } from "@/components/projects/task-types/task-type-icons";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Task } from "@/lib/integration-api";
 import type { TaskStatus, TaskType } from "@/lib/project-api";
 import { cn } from "@/lib/utils";
@@ -14,7 +21,7 @@ interface ListViewProps {
 	canCreate: boolean;
 	searchQuery: string;
 	assigneeFilter: string | null;
-	onCreateTask: (statusId: string, title: string) => Promise<void>;
+	onCreateTask: (statusId: string, title: string, taskTypeId?: string | null) => Promise<void>;
 	onTaskClick: (task: Task) => void;
 	manualSort?: boolean;
 	onReorderTask?: (statusId: string, taskId: string, newIndex: number) => void;
@@ -23,13 +30,18 @@ interface ListViewProps {
 }
 
 interface GroupAddRowProps {
-	onAdd: (title: string) => void;
+	taskTypes: TaskType[];
+	onAdd: (title: string, taskTypeId: string | null) => void;
 }
 
-function GroupAddRow({ onAdd }: GroupAddRowProps) {
+function GroupAddRow({ taskTypes, onAdd }: GroupAddRowProps) {
 	const [open, setOpen] = useState(false);
 	const [value, setValue] = useState("");
+	const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	const defaultType = taskTypes.find((tt) => tt.is_default) ?? taskTypes[0] ?? null;
+	const selectedType = taskTypes.find((tt) => tt.id === selectedTypeId) ?? defaultType;
 
 	const open_ = () => {
 		setOpen(true);
@@ -39,13 +51,15 @@ function GroupAddRow({ onAdd }: GroupAddRowProps) {
 	const submit = () => {
 		const title = value.trim();
 		if (!title) return;
-		onAdd(title);
+		onAdd(title, selectedType?.id ?? null);
 		setValue("");
+		setSelectedTypeId(null);
 		setOpen(false);
 	};
 
 	const cancel = () => {
 		setValue("");
+		setSelectedTypeId(null);
 		setOpen(false);
 	};
 
@@ -62,34 +76,82 @@ function GroupAddRow({ onAdd }: GroupAddRowProps) {
 		);
 	}
 
+	const SelectedIcon = getTaskTypeIconComponent(selectedType?.icon ?? null);
+
 	return (
-		<div className="flex items-center gap-2 px-4 py-2 border-b border-border/30">
-			<input
-				ref={inputRef}
-				value={value}
-				onChange={(e) => setValue(e.target.value)}
-				onKeyDown={(e) => {
-					if (e.key === "Enter") submit();
-					if (e.key === "Escape") cancel();
-				}}
-				placeholder="Task title…"
-				className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-			/>
-			<button
-				type="button"
-				onClick={cancel}
-				className="px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-			>
-				Cancel
-			</button>
-			<button
-				type="button"
-				onClick={submit}
-				disabled={!value.trim()}
-				className="px-2.5 py-0.5 rounded text-xs font-medium bg-primary text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity"
-			>
-				Create
-			</button>
+		<div className="flex flex-col gap-1 px-4 py-2 border-b border-border/30">
+			<div className="flex items-center gap-2">
+				{taskTypes.length > 0 && selectedType && (
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							className={cn(
+								"flex items-center gap-1 rounded px-1.5 py-1 text-xs transition-colors hover:bg-muted/50 shrink-0",
+							)}
+							style={selectedType.color ? { color: selectedType.color } : undefined}
+						>
+							{SelectedIcon ? (
+								<SelectedIcon className="size-3.5" />
+							) : (
+								<span className="text-[10px] font-semibold">{selectedType.name.slice(0, 2)}</span>
+							)}
+							<ChevronDown className="size-3 text-muted-foreground/60" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" className="w-40">
+							{taskTypes.map((tt) => {
+								const Icon = getTaskTypeIconComponent(tt.icon);
+								return (
+									<DropdownMenuItem
+										key={tt.id}
+										onClick={() => setSelectedTypeId(tt.id)}
+										className={cn(
+											"flex items-center gap-2 text-xs",
+											selectedType.id === tt.id && "bg-accent",
+										)}
+									>
+										{Icon ? (
+											<Icon
+												className="size-3.5 shrink-0"
+												style={tt.color ? { color: tt.color } : undefined}
+											/>
+										) : (
+											<span className="size-3.5 shrink-0 text-[10px] font-semibold">
+												{tt.name.slice(0, 2)}
+											</span>
+										)}
+										{tt.name}
+									</DropdownMenuItem>
+								);
+							})}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
+				<input
+					ref={inputRef}
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") submit();
+						if (e.key === "Escape") cancel();
+					}}
+					placeholder="Task title…"
+					className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+				/>
+				<button
+					type="button"
+					onClick={cancel}
+					className="px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onClick={submit}
+					disabled={!value.trim()}
+					className="px-2.5 py-0.5 rounded text-xs font-medium bg-primary text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity"
+				>
+					Create
+				</button>
+			</div>
 		</div>
 	);
 }
@@ -101,7 +163,7 @@ interface StatusGroupProps {
 	taskTypes: TaskType[];
 	canCreate: boolean;
 	defaultCollapsed?: boolean;
-	onCreateTask: (statusId: string, title: string) => Promise<void>;
+	onCreateTask: (statusId: string, title: string, taskTypeId?: string | null) => Promise<void>;
 	onTaskClick: (task: Task) => void;
 	manualSort?: boolean;
 	onReorderTask?: (statusId: string, taskId: string, newIndex: number) => void;
@@ -302,7 +364,10 @@ function StatusGroup({
 					)}
 
 					{canCreate && (
-						<GroupAddRow onAdd={(title) => onCreateTask(status.id, title)} />
+						<GroupAddRow
+							taskTypes={taskTypes}
+							onAdd={(title, typeId) => onCreateTask(status.id, title, typeId)}
+						/>
 					)}
 				</>
 			)}

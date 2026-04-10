@@ -230,6 +230,10 @@ func New(deps Deps) *gin.Engine {
 						httpmw.RequirePermissions(deps.Authorizer, httpmw.ProjectScopeFromParam("projectId"), authz.PermissionTasksWrite),
 						deps.Task.DeleteTaskType,
 					)
+					taskTypes.PUT("/:typeId/set-default",
+						httpmw.RequirePermissions(deps.Authorizer, httpmw.ProjectScopeFromParam("projectId"), authz.PermissionTasksWrite),
+						deps.Task.SetDefaultTaskType,
+					)
 				}
 
 				// Task statuses — project-scoped workflow configuration

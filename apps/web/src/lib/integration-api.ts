@@ -36,6 +36,9 @@ export interface Task {
 	assignee_id?: string | null;
 	reporter_id?: string | null;
 	custom_fields: Record<string, unknown>;
+	start_date?: string | null;
+	due_date?: string | null;
+	tags?: string[];
 	view_position?: number | null;
 	view_group_key?: string | null;
 	created_at: string;
@@ -328,6 +331,7 @@ export async function createTask(
 		sprint_id?: string | null;
 		task_type_id?: string | null;
 		assignee_id?: string | null;
+		parent_task_id?: string | null;
 	},
 ): Promise<Task> {
 	const { data } = await apiClient.instance.post<SuccessEnvelope<Task>>(
@@ -356,6 +360,14 @@ export async function updateTask(
 		sprint_id: string | null;
 		task_type_id: string | null;
 		assignee_id: string | null;
+		reporter_id: string | null;
+		parent_task_id: string | null;
+		description: string | null;
+		importance: number;
+		start_date: string | null;
+		due_date: string | null;
+		tags: string[];
+		custom_fields: Record<string, unknown>;
 	}>,
 ): Promise<Task> {
 	const { data } = await apiClient.instance.patch<SuccessEnvelope<Task>>(
@@ -365,12 +377,30 @@ export async function updateTask(
 	return data.data;
 }
 
+export async function listSubtasks(
+	projectId: string,
+	parentTaskId: string,
+): Promise<Task[]> {
+	const { data } = await apiClient.instance.get<SuccessEnvelope<TaskListResult>>(
+		`/projects/${projectId}/tasks`,
+		{ params: { parent_task_id: parentTaskId, page: 1, page_size: 200 } },
+	);
+	return data.data.items;
+}
+
 // ── Query Options ─────────────────────────────────────────────────────────────
 
 export const taskQueryOptions = (projectId: string, taskId: string) =>
 	queryOptions({
 		queryKey: ["projects", projectId, "tasks", taskId],
 		queryFn: () => getTask(projectId, taskId),
+		staleTime: 15_000,
+	});
+
+export const subtasksQueryOptions = (projectId: string, parentTaskId: string) =>
+	queryOptions({
+		queryKey: ["projects", projectId, "tasks", parentTaskId, "subtasks"],
+		queryFn: () => listSubtasks(projectId, parentTaskId),
 		staleTime: 15_000,
 	});
 

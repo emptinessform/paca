@@ -1,6 +1,14 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+	createTask,
+	sprintsQueryOptions,
+	subtasksQueryOptions,
+	taskQueryOptions,
+	updateTask,
+} from "@/lib/integration-api";
 import { cn } from "@/lib/utils";
 import { getPriority } from "../priority";
 import { ActivityPane } from "./activity-pane";
@@ -25,7 +33,7 @@ export type {
 } from "./types";
 
 export function TaskDetailModal({
-	task,
+	task: taskProp,
 	open,
 	onOpenChange,
 	statuses,
@@ -38,14 +46,65 @@ export function TaskDetailModal({
 	mode = "modal",
 	canEdit = true,
 }: TaskDetailModalProps) {
+	const qc = useQueryClient();
+
+	// Fetch fresh task data whenever the modal is open and we have a projectId
+	const { data: freshTask } = useQuery({
+		...taskQueryOptions(projectId ?? "", taskProp?.id ?? ""),
+		enabled: !!projectId && !!taskProp?.id && (open || mode === "page"),
+	});
+
+	// Use fresh task if available, fall back to prop
+	const task = freshTask ?? taskProp;
+
+	// Fetch subtasks
+	const { data: subtasks = [] } = useQuery({
+		...subtasksQueryOptions(projectId ?? "", task?.id ?? ""),
+		enabled: !!projectId && !!task?.id && (open || mode === "page"),
+	});
+
+	// Fetch sprints for sprint name display + assignment
+	const { data: sprints = [] } = useQuery({
+		...sprintsQueryOptions(projectId ?? ""),
+		enabled: !!projectId && (open || mode === "page"),
+	});
+
 	const status = statuses.find((s) => s.id === task?.status_id);
 	const taskType = taskTypes.find((t) => t.id === task?.task_type_id);
 	const priority = getPriority(task?.importance ?? 0);
 	const assignee = members.find((m) => m.user_id === task?.assignee_id);
 	const reporter = members.find((m) => m.user_id === task?.reporter_id);
 
-	// Placeholder — will come from API
-	const subtasks = [] as Parameters<typeof SubtasksSection>[0]["subtasks"];
+	// ── Title inline edit ─────────────────────────────────────────────────────
+	const [editingTitle, setEditingTitle] = useState(false);
+	const [titleDraft, setTitleDraft] = useState("");
+	const titleInputRef = useRef<HTMLTextAreaElement>(null);
+
+	// ── Update mutation ────────────────────────────────────────────────────────
+	const updateMutation = useMutation({
+		mutationFn: (payload: Parameters<typeof updateTask>[2]) => {
+			if (!projectId || !task) throw new Error("missing context");
+			return updateTask(projectId, task.id, payload);
+		},
+		onSuccess: (updated) => {
+			if (!projectId) return;
+			// Update the task detail cache
+			qc.setQueryData(
+				taskQueryOptions(projectId, updated.id).queryKey,
+				updated,
+			);
+			// Invalidate the task lists (sprint / backlog) so they reflect changes
+			qc.invalidateQueries({
+				queryKey: ["projects", projectId],
+				predicate: (q) => {
+					const key = q.queryKey as string[];
+					return key.includes("tasks") || key.includes("backlog-tasks");
+				},
+			});
+		},
+	});
+
+	const handleUpdate = canEdit ? updateMutation.mutate : undefined;
 
 	// Mock activity entries
 	const activities: ActivityEntry[] = task
@@ -68,7 +127,7 @@ export function TaskDetailModal({
 							},
 						]
 					: []),
-			]
+		  ]
 		: [];
 
 	// Close on Escape (modal mode only)
@@ -136,12 +195,49 @@ export function TaskDetailModal({
 								)}
 							</div>
 
-							<h1
-								className="font-[Syne] text-2xl font-bold leading-snug text-foreground"
-								data-testid="task-title"
-							>
-								{task.title}
-							</h1>
+							{editingTitle ? (
+								<textarea
+									ref={titleInputRef}
+									value={titleDraft}
+									onChange={(e) => setTitleDraft(e.target.value)}
+									onBlur={() => {
+										setEditingTitle(false);
+										const trimmed = titleDraft.trim();
+										if (trimmed && trimmed !== task.title)
+											handleUpdate?.({ title: trimmed });
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" && !e.shiftKey) {
+											e.preventDefault();
+											e.currentTarget.blur();
+										}
+										if (e.key === "Escape") {
+											setEditingTitle(false);
+											setTitleDraft(task.title);
+										}
+									}}
+									rows={1}
+									className="w-full resize-none font-[Syne] text-2xl font-bold leading-snug text-foreground bg-transparent outline-none border-b-2 border-primary rounded-none py-0"
+									data-testid="task-title-input"
+								/>
+							) : (
+								// biome-ignore lint/a11y/noStaticElementInteractions: inline title click-to-edit
+								<h1
+									className={cn(
+										"font-[Syne] text-2xl font-bold leading-snug text-foreground",
+										canEdit && "cursor-text hover:opacity-80 transition-opacity",
+									)}
+									data-testid="task-title"
+									onClick={() => {
+										if (!canEdit) return;
+										setTitleDraft(task.title);
+										setEditingTitle(true);
+										setTimeout(() => titleInputRef.current?.focus(), 0);
+									}}
+								>
+									{task.title}
+								</h1>
+							)}
 						</div>
 
 						{/* Properties */}
@@ -156,16 +252,56 @@ export function TaskDetailModal({
 								priority={priority}
 								assignee={assignee}
 								reporter={reporter}
+								statuses={statuses}
+								taskTypes={taskTypes}
+								members={members}
+								sprints={sprints}
 								initialCustomFields={customFields}
 								canEdit={canEdit}
+								onUpdate={handleUpdate}
 							/>
 						</div>
 
 						{/* Description */}
-						<DescriptionSection description={task.description} />
+						<DescriptionSection
+							description={task.description}
+							canEdit={canEdit}
+							onUpdate={handleUpdate}
+						/>
 
 						{/* Subtasks */}
-						<SubtasksSection subtasks={subtasks} statuses={statuses} />
+						<SubtasksSection
+							projectId={projectId}
+							parentTaskId={task.id}
+							subtasks={subtasks}
+							statuses={statuses}
+							taskTypes={taskTypes}
+							members={members}
+							canEdit={canEdit}
+							task={task}
+							onSubtaskUpdate={(subtaskId, payload) => {
+								if (!projectId) return;
+								updateTask(projectId, subtaskId, payload).then(() => {
+									qc.invalidateQueries({
+										queryKey: subtasksQueryOptions(projectId, task.id).queryKey,
+									});
+								});
+							}}
+							onSubtaskCreate={(payload) => {
+								if (!projectId) return;
+								createTask(projectId, {
+									...payload,
+									parent_task_id: task.id,
+								}).then(() => {
+									qc.invalidateQueries({
+										queryKey: subtasksQueryOptions(
+											projectId,
+											task.id,
+										).queryKey,
+									});
+								});
+							}}
+						/>
 
 						{/* Checklists */}
 						<ChecklistsSection />
@@ -237,3 +373,4 @@ export function TaskDetailModal({
 		</>
 	);
 }
+

@@ -278,17 +278,18 @@ export function IntegrationLayout({
 
 	// ── Task mutation ─────────────────────────────────────────────────────────
 	const createTaskMutation = useMutation({
-		mutationFn: (payload: { title: string; statusId: string }) =>
+		mutationFn: (payload: { title: string; statusId: string; taskTypeId?: string | null }) =>
 			createTask(projectId, {
 				title: payload.title,
 				status_id: payload.statusId,
 				sprint_id: sprintId ?? null,
+				task_type_id: payload.taskTypeId ?? null,
 			}),
 		onSuccess: () => qc.invalidateQueries({ queryKey: tasksBaseQueryKey }),
 	});
 
-	const handleCreateTask = async (statusId: string, title: string) => {
-		await createTaskMutation.mutateAsync({ title, statusId });
+	const handleCreateTask = async (statusId: string, title: string, taskTypeId?: string | null) => {
+		await createTaskMutation.mutateAsync({ title, statusId, taskTypeId });
 	};
 
 	// ── Task reorder ─────────────────────────────────────────────────────────

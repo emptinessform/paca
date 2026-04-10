@@ -177,6 +177,19 @@ func TestCreate_SeedsDefaultTaskTypesAndStatuses(t *testing.T) {
 		}
 	}
 
+	// Verify "Task" is the only default type.
+	for _, tt := range tb.types {
+		if tt.Name == "Task" {
+			if !tt.IsDefault {
+				t.Errorf("expected task type %q to have IsDefault=true", tt.Name)
+			}
+		} else {
+			if tt.IsDefault {
+				t.Errorf("expected task type %q to have IsDefault=false", tt.Name)
+			}
+		}
+	}
+
 	// Verify descriptions are set for default task types
 	expectedDescriptions := map[string]string{
 		"Task":  "A general work item that needs to be completed",

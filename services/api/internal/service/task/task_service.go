@@ -86,6 +86,15 @@ func (s *Service) DeleteTaskType(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteTaskType(ctx, id)
 }
 
+// SetDefaultTaskType marks typeID as the project's default task type,
+// clearing the flag on all other types in the same project.
+func (s *Service) SetDefaultTaskType(ctx context.Context, projectID, typeID uuid.UUID) (*taskdom.TaskType, error) {
+	if err := s.repo.SetDefaultTaskType(ctx, projectID, typeID); err != nil {
+		return nil, err
+	}
+	return s.repo.FindTaskTypeByID(ctx, typeID)
+}
+
 // --- Task Statuses ----------------------------------------------------------
 
 // ListTaskStatuses returns all task statuses for a project.

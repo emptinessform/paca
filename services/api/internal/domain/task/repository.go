@@ -21,6 +21,9 @@ type TaskTypeRepository interface {
 	CreateTaskType(ctx context.Context, t *TaskType) error
 	UpdateTaskType(ctx context.Context, t *TaskType) error
 	DeleteTaskType(ctx context.Context, id uuid.UUID) error
+	// SetDefaultTaskType atomically clears is_default for every type in the
+	// project and then marks the given type as the default.
+	SetDefaultTaskType(ctx context.Context, projectID, typeID uuid.UUID) error
 }
 
 // TaskStatusRepository defines persistence operations for task statuses.
@@ -43,10 +46,11 @@ type TaskRepository interface {
 
 // TaskFilter carries optional criteria for listing tasks.
 type TaskFilter struct {
-	SprintID    *uuid.UUID
-	StatusID    *uuid.UUID
-	AssigneeID  *uuid.UUID
-	BacklogOnly bool // true → only tasks where sprint_id IS NULL
+	SprintID     *uuid.UUID
+	StatusID     *uuid.UUID
+	AssigneeID   *uuid.UUID
+	ParentTaskID *uuid.UUID // non-nil → only subtasks of this parent
+	BacklogOnly  bool       // true → only tasks where sprint_id IS NULL
 }
 
 // CustomFieldDefinitionRepository defines persistence operations for custom

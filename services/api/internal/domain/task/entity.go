@@ -38,6 +38,7 @@ type TaskType struct {
 	Icon        *string
 	Color       *string
 	Description *string
+	IsDefault   bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

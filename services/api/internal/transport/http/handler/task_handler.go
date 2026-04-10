@@ -112,6 +112,26 @@ func (h *TaskHandler) DeleteTaskType(c *gin.Context) {
 	presenter.OK(c, gin.H{"message": "task type deleted"})
 }
 
+// SetDefaultTaskType handles PUT /projects/:projectId/task-types/:typeId/set-default.
+func (h *TaskHandler) SetDefaultTaskType(c *gin.Context) {
+	projectID, err := parseProjectID(c)
+	if err != nil {
+		presenter.Error(c, err)
+		return
+	}
+	typeID, err := parseTaskTypeID(c)
+	if err != nil {
+		presenter.Error(c, err)
+		return
+	}
+	t, err := h.svc.SetDefaultTaskType(c.Request.Context(), projectID, typeID)
+	if err != nil {
+		presenter.Error(c, err)
+		return
+	}
+	presenter.OK(c, dto.TaskTypeFromEntity(t))
+}
+
 // --- Task Statuses ----------------------------------------------------------
 
 // ListTaskStatuses handles GET /projects/:projectId/task-statuses.
@@ -229,6 +249,11 @@ func (h *TaskHandler) ListTasks(c *gin.Context) {
 	if raw := c.Query("assignee_id"); raw != "" {
 		if id, err := uuid.Parse(raw); err == nil {
 			filter.AssigneeID = &id
+		}
+	}
+	if raw := c.Query("parent_task_id"); raw != "" {
+		if id, err := uuid.Parse(raw); err == nil {
+			filter.ParentTaskID = &id
 		}
 	}
 

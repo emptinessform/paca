@@ -70,6 +70,7 @@ Table task_types {
   icon varchar
   color varchar
   description text
+  is_default boolean [not null, default: false, note: 'True for the single default type seeded at project creation (Task). Only one type per project should have is_default = true.']
 }
 
 Table task_statuses {

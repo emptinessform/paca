@@ -164,9 +164,10 @@ func (s *Service) Create(ctx context.Context, in projectdom.CreateProjectInput) 
 func ptr[T any](v T) *T { return &v }
 
 // seedDefaultTaskTypes creates the three built-in task types for a new project.
+// The "Task" type is marked as the default.
 func (s *Service) seedDefaultTaskTypes(ctx context.Context, projectID uuid.UUID, now time.Time) error {
 	defaults := []*taskdom.TaskType{
-		{ID: uuid.New(), ProjectID: projectID, Name: "Task", Icon: ptr("CheckSquare"), Color: ptr("#3b82f6"), Description: ptr("A general work item that needs to be completed"), CreatedAt: now, UpdatedAt: now},
+		{ID: uuid.New(), ProjectID: projectID, Name: "Task", Icon: ptr("CheckSquare"), Color: ptr("#3b82f6"), Description: ptr("A general work item that needs to be completed"), IsDefault: true, CreatedAt: now, UpdatedAt: now},
 		{ID: uuid.New(), ProjectID: projectID, Name: "Bug", Icon: ptr("Bug"), Color: ptr("#ef4444"), Description: ptr("An issue or defect that needs to be fixed"), CreatedAt: now, UpdatedAt: now},
 		{ID: uuid.New(), ProjectID: projectID, Name: "Story", Icon: ptr("BookOpen"), Color: ptr("#22c55e"), Description: ptr("A user-facing feature or requirement"), CreatedAt: now, UpdatedAt: now},
 	}

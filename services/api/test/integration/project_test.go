@@ -692,6 +692,18 @@ func TestIntegrationProjectCreation_DefaultTaskRecords(t *testing.T) {
 		}
 	}
 
+	// "Task" should be the only type with is_default: true.
+	for _, item := range typesEnv.Data.Items {
+		name, _ := item["name"].(string)
+		isDefault, _ := item["is_default"].(bool)
+		if name == "Task" && !isDefault {
+			t.Errorf("expected task type %q to have is_default=true", name)
+		}
+		if name != "Task" && isDefault {
+			t.Errorf("expected task type %q to have is_default=false", name)
+		}
+	}
+
 	// --- task statuses ---
 	statusesURL := fmt.Sprintf("/api/v1/projects/%s/task-statuses", projectID)
 	statusesW := serve(r, authedJSONReq(t.Context(), http.MethodGet, statusesURL, tok, nil))

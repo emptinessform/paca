@@ -24,6 +24,9 @@ type TaskTypeService interface {
 	CreateTaskType(ctx context.Context, in CreateTaskTypeInput) (*TaskType, error)
 	UpdateTaskType(ctx context.Context, id uuid.UUID, in UpdateTaskTypeInput) (*TaskType, error)
 	DeleteTaskType(ctx context.Context, id uuid.UUID) error
+	// SetDefaultTaskType marks typeID as the project's default task type,
+	// clearing the flag on all other types in the same project.
+	SetDefaultTaskType(ctx context.Context, projectID, typeID uuid.UUID) (*TaskType, error)
 }
 
 // CreateTaskTypeInput carries fields required to create a task type.

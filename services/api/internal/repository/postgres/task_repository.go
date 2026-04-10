@@ -22,6 +22,7 @@ type taskTypeRecord struct {
 	Icon        *string `gorm:"type:text"`
 	Color       *string `gorm:"type:text"`
 	Description *string `gorm:"type:text"`
+	IsDefault   bool    `gorm:"not null;default:false;column:is_default"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -116,6 +117,7 @@ func (r *TaskRepository) CreateTaskType(ctx context.Context, t *taskdom.TaskType
 		Icon:        t.Icon,
 		Color:       t.Color,
 		Description: t.Description,
+		IsDefault:   t.IsDefault,
 		CreatedAt:   t.CreatedAt,
 		UpdatedAt:   t.UpdatedAt,
 	}
@@ -148,6 +150,28 @@ func (r *TaskRepository) DeleteTaskType(ctx context.Context, id uuid.UUID) error
 		return fmt.Errorf("task type repo: delete: %w", res.Error)
 	}
 	return nil
+}
+
+// SetDefaultTaskType atomically clears is_default for every type in the project
+// and then marks typeID as the default.
+func (r *TaskRepository) SetDefaultTaskType(ctx context.Context, projectID, typeID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&taskTypeRecord{}).
+			Where("project_id = ?", projectID.String()).
+			Update("is_default", false).Error; err != nil {
+			return fmt.Errorf("task type repo: clear defaults: %w", err)
+		}
+		res := tx.Model(&taskTypeRecord{}).
+			Where("id = ? AND project_id = ?", typeID.String(), projectID.String()).
+			Update("is_default", true)
+		if res.Error != nil {
+			return fmt.Errorf("task type repo: set default: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return taskdom.ErrTypeNotFound
+		}
+		return nil
+	})
 }
 
 // --- Task Statuses ---------------------------------------------------------
@@ -231,7 +255,9 @@ func (r *TaskRepository) ListTasks(ctx context.Context, projectID uuid.UUID, fil
 	q := r.db.WithContext(ctx).Model(&taskRecord{}).
 		Where("project_id = ? AND deleted_at IS NULL", projectID.String())
 
-	if filter.BacklogOnly {
+	if filter.ParentTaskID != nil {
+		q = q.Where("parent_task_id = ?", filter.ParentTaskID.String())
+	} else if filter.BacklogOnly {
 		q = q.Where("sprint_id IS NULL")
 	} else if filter.SprintID != nil {
 		q = q.Where("sprint_id = ?", filter.SprintID.String())
@@ -386,6 +412,7 @@ func toTaskTypeEntity(r *taskTypeRecord) *taskdom.TaskType {
 		Icon:        r.Icon,
 		Color:       r.Color,
 		Description: r.Description,
+		IsDefault:   r.IsDefault,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 	}

@@ -97,6 +97,26 @@ func (r *fakeTaskRepo) DeleteTaskType(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *fakeTaskRepo) SetDefaultTaskType(_ context.Context, projectID, typeID uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	found := false
+	for _, t := range r.types {
+		if t.ProjectID == projectID {
+			if t.ID == typeID {
+				t.IsDefault = true
+				found = true
+			} else {
+				t.IsDefault = false
+			}
+		}
+	}
+	if !found {
+		return taskdom.ErrTypeNotFound
+	}
+	return nil
+}
+
 func (r *fakeTaskRepo) ListTaskStatuses(_ context.Context, projectID uuid.UUID) ([]*taskdom.TaskStatus, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -521,6 +541,93 @@ func TestIntegrationTaskTypes_DeleteNotFoundReturns404(t *testing.T) {
 	// Accept either 200 (idempotent) or 404.
 	if w.Code != http.StatusOK && w.Code != http.StatusNotFound {
 		t.Fatalf("expected 200 or 404, got %d (%s)", w.Code, w.Body.String())
+	}
+}
+
+func TestIntegrationTaskTypes_SetDefault(t *testing.T) {
+	taskRepo := newFakeTaskRepoIT()
+	projectID := uuid.New()
+	store := &projectPermStore{
+		projectPerms: map[uuid.UUID][]authz.Permission{
+			projectID: {authz.PermissionTasksRead, authz.PermissionTasksWrite},
+		},
+	}
+	r := buildTaskTestRouter(taskRepo, store)
+	tok := issueTaskToken(t, uuid.NewString())
+	base := fmt.Sprintf("/api/v1/projects/%s/task-types", projectID)
+
+	// Create two task types.
+	createW1 := serve(r, authedJSONReq(t.Context(), http.MethodPost, base, tok, map[string]any{"name": "Task"}))
+	if createW1.Code != http.StatusCreated {
+		t.Fatalf("create type 1: expected 201, got %d (%s)", createW1.Code, createW1.Body.String())
+	}
+	typeID1 := taskIDFrom(t, "task-type", createW1.Body.Bytes())
+
+	createW2 := serve(r, authedJSONReq(t.Context(), http.MethodPost, base, tok, map[string]any{"name": "Bug"}))
+	if createW2.Code != http.StatusCreated {
+		t.Fatalf("create type 2: expected 201, got %d (%s)", createW2.Code, createW2.Body.String())
+	}
+	taskIDFrom(t, "task-type", createW2.Body.Bytes())
+
+	// Set type 1 as default.
+	setDefaultW := serve(r, authedJSONReq(t.Context(), http.MethodPut, base+"/"+typeID1+"/set-default", tok, nil))
+	if setDefaultW.Code != http.StatusOK {
+		t.Fatalf("set default: expected 200, got %d (%s)", setDefaultW.Code, setDefaultW.Body.String())
+	}
+
+	// Verify the response has is_default: true.
+	var setEnv struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(setDefaultW.Body.Bytes(), &setEnv); err != nil {
+		t.Fatalf("decode set-default response: %v", err)
+	}
+	if isDefault, _ := setEnv.Data["is_default"].(bool); !isDefault {
+		t.Errorf("expected is_default=true in set-default response, got %v", setEnv.Data["is_default"])
+	}
+
+	// Verify listing shows exactly one default type and it's type 1.
+	listW := serve(r, authedJSONReq(t.Context(), http.MethodGet, base, tok, nil))
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list types: expected 200, got %d (%s)", listW.Code, listW.Body.String())
+	}
+	var listEnv struct {
+		Data struct {
+			Items []map[string]any `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listW.Body.Bytes(), &listEnv); err != nil {
+		t.Fatalf("decode list response: %v", err)
+	}
+	defaultCount := 0
+	for _, item := range listEnv.Data.Items {
+		if d, _ := item["is_default"].(bool); d {
+			defaultCount++
+			if id, _ := item["id"].(string); id != typeID1 {
+				t.Errorf("expected default type id=%s, got %s", typeID1, id)
+			}
+		}
+	}
+	if defaultCount != 1 {
+		t.Errorf("expected exactly 1 default type, got %d", defaultCount)
+	}
+}
+
+func TestIntegrationTaskTypes_SetDefault_NotFound(t *testing.T) {
+	taskRepo := newFakeTaskRepoIT()
+	projectID := uuid.New()
+	store := &projectPermStore{
+		projectPerms: map[uuid.UUID][]authz.Permission{
+			projectID: {authz.PermissionTasksWrite},
+		},
+	}
+	r := buildTaskTestRouter(taskRepo, store)
+	tok := issueTaskToken(t, uuid.NewString())
+
+	w := serve(r, authedJSONReq(t.Context(), http.MethodPut,
+		fmt.Sprintf("/api/v1/projects/%s/task-types/%s/set-default", projectID, uuid.New()), tok, nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for non-existent type, got %d (%s)", w.Code, w.Body.String())
 	}
 }
 
