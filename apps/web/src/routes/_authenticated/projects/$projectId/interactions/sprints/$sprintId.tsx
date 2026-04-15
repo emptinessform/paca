@@ -79,9 +79,8 @@ function SprintPage() {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["projects", projectId, "sprints"] });
 			qc.invalidateQueries({
-				queryKey: ["projects", projectId, "backlog-tasks"],
+				queryKey: ["projects", projectId, "tasks"],
 			});
-			qc.invalidateQueries({ queryKey: ["projects", projectId, "all-tasks"] });
 			qc.invalidateQueries({
 				queryKey: ["projects", projectId, "sprints", sprintId, "tasks"],
 			});

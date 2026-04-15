@@ -299,10 +299,7 @@ function ProjectInteractionsSection({ projectId }: { projectId: string }) {
 		}) => updateTask(projectId, taskId, { sprint_id: sprintId }),
 		onSuccess: () => {
 			qc.invalidateQueries({
-				queryKey: ["projects", projectId, "backlog-tasks"],
-			});
-			qc.invalidateQueries({
-				queryKey: ["projects", projectId, "all-tasks"],
+				queryKey: ["projects", projectId, "tasks"],
 			});
 			qc.invalidateQueries({ queryKey: ["projects", projectId, "sprints"] });
 		},
