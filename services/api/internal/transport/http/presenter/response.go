@@ -233,6 +233,7 @@ func httpStatusForCode(code apierr.Code) int {
 		apierr.CodeCustomFieldNameInvalid:
 		return http.StatusBadRequest
 	case apierr.CodeViewIsLastView,
+		apierr.CodeSprintAlreadyComplete,
 		apierr.CodeCustomFieldKeyTaken,
 		apierr.CodeTaskTypeNameReserved:
 		return http.StatusConflict

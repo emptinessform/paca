@@ -50,7 +50,7 @@ func (f *fakeSprintSvcH) UpdateSprint(_ context.Context, _ uuid.UUID, _ sprintdo
 func (f *fakeSprintSvcH) DeleteSprint(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
-func (f *fakeSprintSvcH) CompleteSprint(_ context.Context, id uuid.UUID, in sprintdom.CompleteSprintInput) (*sprintdom.Sprint, error) {
+func (f *fakeSprintSvcH) CompleteSprint(_ context.Context, id uuid.UUID, _ sprintdom.CompleteSprintInput) (*sprintdom.Sprint, error) {
 	for _, sp := range f.created {
 		if sp.ID == id {
 			sp.Status = sprintdom.SprintStatusCompleted
