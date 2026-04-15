@@ -239,6 +239,11 @@ export function BoardView({
 				colDef.fieldValue,
 				customFields,
 			);
+			// Preserve sprint_id when changing status so the task doesn't silently
+			// get moved to the product backlog.
+			if (isStatusGrouping) {
+				update.sprint_id = task.sprint_id;
+			}
 			if (onMoveToColumn) {
 				onMoveToColumn(taskId, update);
 			} else {
@@ -286,6 +291,11 @@ export function BoardView({
 				customFields,
 			);
 			Object.assign(updates, colUpdate);
+			// Preserve sprint_id when changing status so the task doesn't silently
+			// get moved to the product backlog.
+			if (isStatusGrouping) {
+				updates.sprint_id = task.sprint_id;
+			}
 		}
 
 		// Update swimlane field if task dropped onto a different band
@@ -374,6 +384,11 @@ export function BoardView({
 				customFields,
 			);
 			Object.assign(updates, colUpdate);
+			// Preserve sprint_id when changing status so the task doesn't silently
+			// get moved to the product backlog.
+			if (isStatusGrouping) {
+				updates.sprint_id = task.sprint_id;
+			}
 		}
 
 		// Update swimlane field if moved to a different band
