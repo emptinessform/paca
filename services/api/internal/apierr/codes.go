@@ -122,6 +122,23 @@ const (
 	CodeBDDScenarioNotFound Code = "BDD_SCENARIO_NOT_FOUND"
 	// CodeBDDScenarioTitleInvalid indicates an empty or invalid BDD scenario title.
 	CodeBDDScenarioTitleInvalid Code = "BDD_SCENARIO_TITLE_INVALID"
+
+	// CodeFileNotFound indicates the requested file record does not exist.
+	CodeFileNotFound Code = "FILE_NOT_FOUND"
+	// CodeAttachmentNotFound indicates the requested task attachment does not exist.
+	CodeAttachmentNotFound Code = "ATTACHMENT_NOT_FOUND"
+	// CodeUploadNotPending indicates the file is not in the pending upload state.
+	CodeUploadNotPending Code = "ATTACHMENT_UPLOAD_NOT_PENDING"
+	// CodeAttachmentInvalid indicates invalid input for creating an attachment.
+	CodeAttachmentInvalid Code = "ATTACHMENT_INVALID"
+	// CodeMultipartUploadIDRequired indicates that a multipart upload_id was not provided.
+	CodeMultipartUploadIDRequired Code = "ATTACHMENT_MULTIPART_UPLOAD_ID_REQUIRED"
+	// CodeNotMultipartUpload indicates that an upload_id was provided for a non-multipart file.
+	CodeNotMultipartUpload Code = "ATTACHMENT_NOT_MULTIPART_UPLOAD"
+	// CodeUploadIDMismatch indicates that the provided upload_id does not match the stored one.
+	CodeUploadIDMismatch Code = "ATTACHMENT_UPLOAD_ID_MISMATCH"
+	// CodeMultipartPartsEmpty indicates that no parts were provided for a multipart complete request.
+	CodeMultipartPartsEmpty Code = "ATTACHMENT_MULTIPART_PARTS_EMPTY"
 )
 
 // Error carries a machine-readable Code alongside a human-readable Message.

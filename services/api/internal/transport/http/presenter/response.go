@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/paca/api/internal/apierr"
+	attachmentdom "github.com/paca/api/internal/domain/attachment"
 	domainauth "github.com/paca/api/internal/domain/auth"
 	globalroledom "github.com/paca/api/internal/domain/globalrole"
 	projectdom "github.com/paca/api/internal/domain/project"
@@ -170,6 +171,24 @@ func statusAndCodeFor(err error) (int, apierr.Code) {
 		return http.StatusNotFound, apierr.CodeBDDScenarioNotFound
 	case errors.Is(err, taskdom.ErrBDDScenarioTitleInvalid):
 		return http.StatusBadRequest, apierr.CodeBDDScenarioTitleInvalid
+	case errors.Is(err, attachmentdom.ErrFileNotFound):
+		return http.StatusNotFound, apierr.CodeFileNotFound
+	case errors.Is(err, attachmentdom.ErrAttachmentNotFound):
+		return http.StatusNotFound, apierr.CodeAttachmentNotFound
+	case errors.Is(err, attachmentdom.ErrUploadNotPending):
+		return http.StatusConflict, apierr.CodeUploadNotPending
+	case errors.Is(err, attachmentdom.ErrFileSizeZero),
+		errors.Is(err, attachmentdom.ErrFileNameEmpty),
+		errors.Is(err, attachmentdom.ErrContentTypeEmpty):
+		return http.StatusBadRequest, apierr.CodeAttachmentInvalid
+	case errors.Is(err, attachmentdom.ErrMultipartUploadIDRequired):
+		return http.StatusBadRequest, apierr.CodeMultipartUploadIDRequired
+	case errors.Is(err, attachmentdom.ErrNotMultipartUpload):
+		return http.StatusBadRequest, apierr.CodeNotMultipartUpload
+	case errors.Is(err, attachmentdom.ErrUploadIDMismatch):
+		return http.StatusBadRequest, apierr.CodeUploadIDMismatch
+	case errors.Is(err, attachmentdom.ErrMultipartPartsEmpty):
+		return http.StatusBadRequest, apierr.CodeMultipartPartsEmpty
 	default:
 		return http.StatusInternalServerError, apierr.CodeInternalError
 	}
@@ -222,9 +241,17 @@ func httpStatusForCode(code apierr.Code) int {
 		apierr.CodeSprintNotFound,
 		apierr.CodeViewNotFound,
 		apierr.CodeCustomFieldNotFound,
-		apierr.CodeBDDScenarioNotFound:
+		apierr.CodeBDDScenarioNotFound,
+		apierr.CodeFileNotFound,
+		apierr.CodeAttachmentNotFound:
 		return http.StatusNotFound
-	case apierr.CodeTaskTitleInvalid,
+	case apierr.CodeUploadNotPending,
+		apierr.CodeAttachmentInvalid,
+		apierr.CodeMultipartUploadIDRequired,
+		apierr.CodeNotMultipartUpload,
+		apierr.CodeUploadIDMismatch,
+		apierr.CodeMultipartPartsEmpty,
+		apierr.CodeTaskTitleInvalid,
 		apierr.CodeTaskTypeNameInvalid,
 		apierr.CodeTaskStatusNameInvalid,
 		apierr.CodeTaskStatusCategoryInvalid,
