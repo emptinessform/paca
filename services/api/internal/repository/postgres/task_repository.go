@@ -764,7 +764,7 @@ func toBDDScenarioEntity(r *bddScenarioRecord) *taskdom.BDDScenario {
 	}
 }
 
-// ListBDDScenarios returns all BDD scenarios for a task ordered by position.
+// ListBDDScenarios returns all BDD scenarios for a task ordered by creation date.
 func (r *TaskRepository) ListBDDScenarios(ctx context.Context, taskID uuid.UUID) ([]*taskdom.BDDScenario, error) {
 	var records []bddScenarioRecord
 	if err := r.db.WithContext(ctx).
