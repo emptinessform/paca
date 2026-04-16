@@ -400,3 +400,83 @@ func (s *Service) DeleteCustomFieldDefinition(ctx context.Context, id uuid.UUID)
 	}
 	return s.repo.DeleteCustomFieldDefinition(ctx, id)
 }
+
+// --- BDD Scenarios ---------------------------------------------------------
+
+// ListBDDScenarios returns all BDD scenarios for the given task.
+func (s *Service) ListBDDScenarios(ctx context.Context, taskID uuid.UUID) ([]*taskdom.BDDScenario, error) {
+	return s.repo.ListBDDScenarios(ctx, taskID)
+}
+
+// GetBDDScenario returns the BDD scenario with the given ID.
+func (s *Service) GetBDDScenario(ctx context.Context, id uuid.UUID) (*taskdom.BDDScenario, error) {
+	return s.repo.FindBDDScenarioByID(ctx, id)
+}
+
+// CreateBDDScenario creates a new BDD scenario for the given task.
+func (s *Service) CreateBDDScenario(ctx context.Context, in taskdom.CreateBDDScenarioInput) (*taskdom.BDDScenario, error) {
+	// Verify that the parent task exists.
+	if _, err := s.repo.FindTaskByID(ctx, in.TaskID); err != nil {
+		return nil, err
+	}
+
+	title := strings.TrimSpace(in.Title)
+	if title == "" {
+		return nil, taskdom.ErrBDDScenarioTitleInvalid
+	}
+
+	now := time.Now()
+	scenario := &taskdom.BDDScenario{
+		ID:        uuid.New(),
+		TaskID:    in.TaskID,
+		Title:     title,
+		Given:     in.Given,
+		When:      in.When,
+		Then:      in.Then,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := s.repo.CreateBDDScenario(ctx, scenario); err != nil {
+		return nil, err
+	}
+	return scenario, nil
+}
+
+// UpdateBDDScenario applies partial updates to an existing BDD scenario.
+func (s *Service) UpdateBDDScenario(ctx context.Context, id uuid.UUID, in taskdom.UpdateBDDScenarioInput) (*taskdom.BDDScenario, error) {
+	scenario, err := s.repo.FindBDDScenarioByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if in.Title != nil {
+		title := strings.TrimSpace(*in.Title)
+		if title == "" {
+			return nil, taskdom.ErrBDDScenarioTitleInvalid
+		}
+		scenario.Title = title
+	}
+	if in.Given != nil {
+		scenario.Given = *in.Given
+	}
+	if in.When != nil {
+		scenario.When = *in.When
+	}
+	if in.Then != nil {
+		scenario.Then = *in.Then
+	}
+	scenario.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateBDDScenario(ctx, scenario); err != nil {
+		return nil, err
+	}
+	return scenario, nil
+}
+
+// DeleteBDDScenario removes a BDD scenario by ID.
+func (s *Service) DeleteBDDScenario(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.repo.FindBDDScenarioByID(ctx, id); err != nil {
+		return err
+	}
+	return s.repo.DeleteBDDScenario(ctx, id)
+}

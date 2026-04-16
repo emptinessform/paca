@@ -166,6 +166,10 @@ func statusAndCodeFor(err error) (int, apierr.Code) {
 		return http.StatusBadRequest, apierr.CodeCustomFieldTypeInvalid
 	case errors.Is(err, taskdom.ErrCustomFieldNameInvalid):
 		return http.StatusBadRequest, apierr.CodeCustomFieldNameInvalid
+	case errors.Is(err, taskdom.ErrBDDScenarioNotFound):
+		return http.StatusNotFound, apierr.CodeBDDScenarioNotFound
+	case errors.Is(err, taskdom.ErrBDDScenarioTitleInvalid):
+		return http.StatusBadRequest, apierr.CodeBDDScenarioTitleInvalid
 	default:
 		return http.StatusInternalServerError, apierr.CodeInternalError
 	}
@@ -217,7 +221,8 @@ func httpStatusForCode(code apierr.Code) int {
 		apierr.CodeTaskStatusNotFound,
 		apierr.CodeSprintNotFound,
 		apierr.CodeViewNotFound,
-		apierr.CodeCustomFieldNotFound:
+		apierr.CodeCustomFieldNotFound,
+		apierr.CodeBDDScenarioNotFound:
 		return http.StatusNotFound
 	case apierr.CodeTaskTitleInvalid,
 		apierr.CodeTaskTypeNameInvalid,
@@ -230,7 +235,8 @@ func httpStatusForCode(code apierr.Code) int {
 		apierr.CodeViewReorderInvalid,
 		apierr.CodeCustomFieldKeyInvalid,
 		apierr.CodeCustomFieldTypeInvalid,
-		apierr.CodeCustomFieldNameInvalid:
+		apierr.CodeCustomFieldNameInvalid,
+		apierr.CodeBDDScenarioTitleInvalid:
 		return http.StatusBadRequest
 	case apierr.CodeViewIsLastView,
 		apierr.CodeSprintAlreadyComplete,
