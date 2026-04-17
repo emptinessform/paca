@@ -422,7 +422,7 @@ a {
 }
 
 /* BlockNote dark-mode theme — aligned with the app's deep-navy dark palette */
-.dark .bn-root[data-color-scheme=dark] {
+.dark .bn-root[data-color-scheme="dark"] {
 	/* Editor canvas — transparent so the card container background shows through */
 	--bn-colors-editor-text: #dde4ff;
 	--bn-colors-editor-background: transparent;
