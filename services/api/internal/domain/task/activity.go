@@ -131,7 +131,8 @@ type AddCommentInput struct {
 // RecordActivityInput carries the data needed to persist a system event.
 type RecordActivityInput struct {
 	TaskID       uuid.UUID
-	ActorID      *uuid.UUID // nil is allowed for system events
+	ProjectID    uuid.UUID  // needed by consumer to resolve ActorID (user) → member ID
+	ActorID      *uuid.UUID // nil is allowed for system events; contains the user UUID
 	ActivityType ActivityType
 	Content      json.RawMessage
 }

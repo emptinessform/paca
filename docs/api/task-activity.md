@@ -15,7 +15,7 @@ the UI can render them in a single chronological feed.
 CREATE TABLE task_activities (
     id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id       UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    actor_id      UUID        REFERENCES users(id) ON DELETE SET NULL,
+    actor_id      UUID        REFERENCES project_members(id) ON DELETE SET NULL,
     activity_type TEXT        NOT NULL,
     content       JSONB       NOT NULL DEFAULT '{}'::jsonb,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -23,6 +23,13 @@ CREATE TABLE task_activities (
     deleted_at    TIMESTAMPTZ  -- soft-delete for comments
 );
 ```
+
+> **Note on `actor_id`:** The field references `project_members(id)`, not `users(id)`.
+> When a task mutation is recorded, the API publishes the authenticated user's UUID to the
+> activity stream along with the task's `project_id`. The `ActivityConsumer` worker resolves
+> the user UUID to the corresponding `project_members.id` at consume-time before writing to
+> the database. If the member has been removed from the project by the time the message is
+> processed, `actor_id` is stored as `NULL`.
 
 Indexes: `(task_id, created_at)` for efficient chronological listing.
 

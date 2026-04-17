@@ -420,6 +420,7 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		content, _ := json.Marshal(map[string]any{"title": t.Title})
 		_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 			TaskID:       t.ID,
+			ProjectID:    projectID,
 			ActorID:      &actorID,
 			ActivityType: taskdom.ActivityTypeTaskCreated,
 			Content:      content,
@@ -470,8 +471,10 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 		changes := h.taskChangedFields(c.Request.Context(), oldTask, req)
 		if len(changes) > 0 {
 			content, _ := json.Marshal(map[string]any{"changes": changes})
+			projectID, _ := parseProjectID(c)
 			_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 				TaskID:       taskID,
+				ProjectID:    projectID,
 				ActorID:      &actorID,
 				ActivityType: taskdom.ActivityTypeTaskUpdated,
 				Content:      content,
@@ -623,8 +626,10 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 
 	// Record deletion activity (best-effort).
 	if actorID, ok := middleware.ActorIDFromContext(c.Request.Context()); ok {
+		projectID, _ := parseProjectID(c)
 		_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 			TaskID:       taskID,
+			ProjectID:    projectID,
 			ActorID:      &actorID,
 			ActivityType: taskdom.ActivityTypeTaskDeleted,
 			Content:      json.RawMessage(`{}`),
@@ -989,8 +994,10 @@ func (h *TaskHandler) CreateBDDScenario(c *gin.Context) {
 	// Record BDD scenario creation activity (best-effort).
 	if actorID, ok := middleware.ActorIDFromContext(c.Request.Context()); ok {
 		content, _ := json.Marshal(map[string]any{"title": scenario.Title})
+		projectID, _ := parseProjectID(c)
 		_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 			TaskID:       taskID,
+			ProjectID:    projectID,
 			ActorID:      &actorID,
 			ActivityType: taskdom.ActivityTypeBDDScenarioCreated,
 			Content:      content,
@@ -1042,8 +1049,10 @@ func (h *TaskHandler) UpdateBDDScenario(c *gin.Context) {
 	// Record BDD scenario update activity (best-effort).
 	if actorID, ok := middleware.ActorIDFromContext(c.Request.Context()); ok {
 		content, _ := json.Marshal(map[string]any{"title": scenario.Title})
+		projectID, _ := parseProjectID(c)
 		_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 			TaskID:       scenario.TaskID,
+			ProjectID:    projectID,
 			ActorID:      &actorID,
 			ActivityType: taskdom.ActivityTypeBDDScenarioUpdated,
 			Content:      content,
@@ -1076,8 +1085,10 @@ func (h *TaskHandler) DeleteBDDScenario(c *gin.Context) {
 	// Record BDD scenario deletion activity (best-effort).
 	if actorID, ok := middleware.ActorIDFromContext(c.Request.Context()); ok {
 		content, _ := json.Marshal(map[string]any{"title": scenario.Title})
+		projectID, _ := parseProjectID(c)
 		_ = h.activitySvc.RecordActivity(c.Request.Context(), taskdom.RecordActivityInput{
 			TaskID:       scenario.TaskID,
+			ProjectID:    projectID,
 			ActorID:      &actorID,
 			ActivityType: taskdom.ActivityTypeBDDScenarioDeleted,
 			Content:      content,

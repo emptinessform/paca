@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	projectdom "github.com/paca/api/internal/domain/project"
 	taskdom "github.com/paca/api/internal/domain/task"
 	"github.com/paca/api/internal/events"
 	"github.com/redis/go-redis/v9"
@@ -25,24 +26,31 @@ const (
 // Valkey stream (written by ActivitySvc.RecordActivity) and persists each
 // entry to the database via ActivityRepository.
 //
+// The actor_id stored in the stream is the authenticated user's UUID.  The
+// consumer resolves it to the corresponding project_members.id via memberRepo
+// before writing to the DB (since task_activities.actor_id references
+// project_members, not users).
+//
 // Comment operations (AddComment / UpdateComment / DeleteComment) write to the
 // database directly, so they are NOT handled here.
 type ActivityConsumer struct {
-	client *redis.Client
-	repo   taskdom.ActivityRepository
-	log    *slog.Logger
-	stopCh chan struct{}
-	doneCh chan struct{}
+	client     *redis.Client
+	repo       taskdom.ActivityRepository
+	memberRepo projectdom.MemberRepository
+	log        *slog.Logger
+	stopCh     chan struct{}
+	doneCh     chan struct{}
 }
 
 // NewActivityConsumer creates a consumer that is ready to be started.
-func NewActivityConsumer(client *redis.Client, repo taskdom.ActivityRepository, log *slog.Logger) *ActivityConsumer {
+func NewActivityConsumer(client *redis.Client, repo taskdom.ActivityRepository, memberRepo projectdom.MemberRepository, log *slog.Logger) *ActivityConsumer {
 	return &ActivityConsumer{
-		client: client,
-		repo:   repo,
-		log:    log,
-		stopCh: make(chan struct{}),
-		doneCh: make(chan struct{}),
+		client:     client,
+		repo:       repo,
+		memberRepo: memberRepo,
+		log:        log,
+		stopCh:     make(chan struct{}),
+		doneCh:     make(chan struct{}),
 	}
 }
 
@@ -159,6 +167,22 @@ func (c *ActivityConsumer) handle(msg redis.XMessage) {
 		return
 	}
 
+	// Resolve actor user UUID → project_members.id so that task_activities.actor_id
+	// correctly references the project_members table.
+	if a.ActorID != nil && p.ProjectID != "" {
+		projectID, pErr := uuid.Parse(p.ProjectID)
+		if pErr == nil {
+			member, mErr := c.memberRepo.FindMemberByUserProject(ctx, *a.ActorID, projectID)
+			if mErr == nil {
+				a.ActorID = &member.ID
+			} else {
+				// Member may have been removed; store nil rather than a stale user UUID.
+				c.log.Warn("activity consumer: could not resolve member for actor", "user_id", a.ActorID, "project_id", projectID, "err", mErr)
+				a.ActorID = nil
+			}
+		}
+	}
+
 	if err := c.repo.CreateActivity(ctx, a); err != nil {
 		// Log and do NOT ack — the message stays in the PEL and will be
 		// retried on next startup via processPending.
@@ -180,6 +204,7 @@ func (c *ActivityConsumer) ack(ctx context.Context, id string) {
 type activityStreamPayload struct {
 	ID           string  `json:"id"`
 	TaskID       string  `json:"task_id"`
+	ProjectID    string  `json:"project_id"`
 	ActorID      *string `json:"actor_id"`
 	ActivityType string  `json:"activity_type"`
 	Content      string  `json:"content"`

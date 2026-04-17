@@ -46,7 +46,7 @@ func (s *ActivitySvc) RecordActivity(ctx context.Context, in taskdom.RecordActiv
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	s.publishToActivityStream(ctx, a)
+	s.publishToActivityStream(ctx, a, in.ProjectID)
 	return nil
 }
 
@@ -77,7 +77,7 @@ func (s *ActivitySvc) AddComment(ctx context.Context, in taskdom.AddCommentInput
 	if err := s.repo.CreateActivity(ctx, a); err != nil {
 		return nil, err
 	}
-	s.publishRealtimeOnly(ctx, events.TopicTaskCommentAdded, activityPayload(a))
+	s.publishRealtimeOnly(ctx, events.TopicTaskCommentAdded, activityPayload(a, uuid.Nil))
 	return a, nil
 }
 
@@ -103,7 +103,7 @@ func (s *ActivitySvc) UpdateComment(ctx context.Context, id uuid.UUID, actorID u
 	if err := s.repo.UpdateActivity(ctx, a); err != nil {
 		return nil, err
 	}
-	s.publishRealtimeOnly(ctx, events.TopicTaskCommentUpdated, activityPayload(a))
+	s.publishRealtimeOnly(ctx, events.TopicTaskCommentUpdated, activityPayload(a, uuid.Nil))
 	return a, nil
 }
 
@@ -133,11 +133,13 @@ func (s *ActivitySvc) DeleteComment(ctx context.Context, id uuid.UUID, actorID u
 // --- helpers ----------------------------------------------------------------
 
 // activityPayload builds the full stream message body for an activity entry.
-// It includes every field the ActivityConsumer needs to persist the row to DB.
-func activityPayload(a *taskdom.Activity) map[string]any {
+// projectID is included so the consumer can resolve the actor (user UUID) to
+// the correct project_members.id.
+func activityPayload(a *taskdom.Activity, projectID uuid.UUID) map[string]any {
 	p := map[string]any{
 		"id":            a.ID,
 		"task_id":       a.TaskID,
+		"project_id":    projectID,
 		"activity_type": string(a.ActivityType),
 		"content":       string(a.Content),
 		"created_at":    a.CreatedAt,
@@ -153,11 +155,11 @@ func activityPayload(a *taskdom.Activity) map[string]any {
 // Valkey stream and also broadcasts a real-time pub/sub notification.
 // Errors are intentionally swallowed — a messaging failure must not block
 // the primary HTTP response.
-func (s *ActivitySvc) publishToActivityStream(ctx context.Context, a *taskdom.Activity) {
+func (s *ActivitySvc) publishToActivityStream(ctx context.Context, a *taskdom.Activity, projectID uuid.UUID) {
 	if s.publisher == nil {
 		return
 	}
-	payload := activityPayload(a)
+	payload := activityPayload(a, projectID)
 	_ = s.publisher.Append(ctx, events.StreamTaskActivities, string(a.ActivityType), payload)
 	_ = s.publisher.Publish(ctx, events.ChannelRealtime, map[string]any{
 		"type":    string(a.ActivityType),

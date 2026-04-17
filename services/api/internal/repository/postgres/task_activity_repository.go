@@ -23,7 +23,7 @@ type taskActivityRecord struct {
 	UpdatedAt    time.Time
 	DeletedAt    *time.Time `gorm:"column:deleted_at"`
 
-	// Joined from the users table (populated by explicit SELECT with JOIN).
+	// Joined from the project_members + users tables (populated by explicit SELECT with JOIN).
 	ActorFullName *string `gorm:"->;column:actor_full_name"`
 	ActorUsername *string `gorm:"->;column:actor_username"`
 }
@@ -69,11 +69,12 @@ func activityFromRecord(r taskActivityRecord) *taskdom.Activity {
 
 // --- CRUD -------------------------------------------------------------------
 
-// listQuery returns a base query that LEFT JOINs users for actor name resolution.
+// listQuery returns a base query that LEFT JOINs project_members → users for actor name resolution.
 func (r *TaskActivityRepository) listQuery() *gorm.DB {
 	return r.db.Table("task_activities ta").
 		Select("ta.*, u.full_name AS actor_full_name, u.username AS actor_username").
-		Joins("LEFT JOIN users u ON u.id = ta.actor_id")
+		Joins("LEFT JOIN project_members pm ON pm.id = ta.actor_id").
+		Joins("LEFT JOIN users u ON u.id = pm.user_id")
 }
 
 // ListActivities returns all non-deleted activities for a task, oldest first.

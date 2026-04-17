@@ -299,6 +299,10 @@ func (r *fakeProjectRepo) FindMember(_ context.Context, projectID, userID uuid.U
 	return cloneMember(m), nil
 }
 
+func (r *fakeProjectRepo) FindMemberByUserProject(_ context.Context, userID, projectID uuid.UUID) (*projectdom.ProjectMember, error) {
+	return r.FindMember(context.Background(), projectID, userID)
+}
+
 func (r *fakeProjectRepo) AddMember(_ context.Context, m *projectdom.ProjectMember) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
