@@ -45,8 +45,12 @@ type ActivityConsumer struct {
 
 // NewActivityConsumer creates a consumer that is ready to be started.
 // The consumer name is derived from the hostname so it is unique per pod/instance.
+// If hostname retrieval fails, a random UUID suffix is used as fallback.
 func NewActivityConsumer(client *redis.Client, repo taskdom.ActivityRepository, memberRepo projectdom.MemberRepository, log *slog.Logger) *ActivityConsumer {
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil || hostname == "" {
+		hostname = uuid.New().String()
+	}
 	return &ActivityConsumer{
 		client:       client,
 		repo:         repo,
