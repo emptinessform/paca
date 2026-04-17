@@ -37,6 +37,17 @@ type projectRoleRecord struct {
 
 func (projectRoleRecord) TableName() string { return "project_roles" }
 
+type projectMemberRecord struct {
+	ID            string `gorm:"primarykey;type:uuid"`
+	ProjectID     string `gorm:"type:uuid;not null;column:project_id"`
+	UserID        string `gorm:"type:uuid;not null;column:user_id"`
+	ProjectRoleID string `gorm:"type:uuid;not null;column:project_role_id"`
+	CreatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+}
+
+func (projectMemberRecord) TableName() string { return "project_members" }
+
 // projectMemberReadRow is the result of the SELECT … JOIN query.
 type projectMemberReadRow struct {
 	ID            string
@@ -47,7 +58,7 @@ type projectMemberReadRow struct {
 	FullName      string
 	RoleName      string
 	CreatedAt     time.Time
-	DeletedAt     *time.Time
+	DeletedAt     gorm.DeletedAt
 }
 
 // --- Repository -------------------------------------------------------------
@@ -307,8 +318,8 @@ func (r *ProjectRepository) DeleteRole(ctx context.Context, id uuid.UUID) error 
 func (r *ProjectRepository) CountMembersWithRole(ctx context.Context, roleID uuid.UUID) (int64, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).
-		Table("project_members").
-		Where("project_role_id = ? AND deleted_at IS NULL", roleID.String()).
+		Model(&projectMemberRecord{}).
+		Where("project_role_id = ?", roleID.String()).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("project repo: count members with role: %w", err)
 	}
@@ -420,11 +431,9 @@ func (r *ProjectRepository) UpdateMemberRole(ctx context.Context, projectID, use
 
 // RemoveMember soft-deletes the membership row for the given project + user.
 func (r *ProjectRepository) RemoveMember(ctx context.Context, projectID, userID uuid.UUID) error {
-	now := time.Now()
 	result := r.db.WithContext(ctx).
-		Table("project_members").
-		Where("project_id = ? AND user_id = ? AND deleted_at IS NULL", projectID.String(), userID.String()).
-		Update("deleted_at", now)
+		Where("project_id = ? AND user_id = ?", projectID.String(), userID.String()).
+		Delete(&projectMemberRecord{})
 	if result.Error != nil {
 		return fmt.Errorf("project repo: remove member: %w", result.Error)
 	}
@@ -537,6 +546,10 @@ func toMemberEntity(row *projectMemberReadRow) *projectdom.ProjectMember {
 	projectID, _ := uuid.Parse(row.ProjectID)
 	userID, _ := uuid.Parse(row.UserID)
 	roleID, _ := uuid.Parse(row.ProjectRoleID)
+	var deletedAt *time.Time
+	if row.DeletedAt.Valid {
+		deletedAt = &row.DeletedAt.Time
+	}
 	m := &projectdom.ProjectMember{
 		ID:            id,
 		ProjectID:     projectID,
@@ -546,7 +559,7 @@ func toMemberEntity(row *projectMemberReadRow) *projectdom.ProjectMember {
 		FullName:      row.FullName,
 		RoleName:      row.RoleName,
 		CreatedAt:     row.CreatedAt,
-		DeletedAt:     row.DeletedAt,
+		DeletedAt:     deletedAt,
 	}
 	return m
 }

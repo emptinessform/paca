@@ -21,7 +21,7 @@ type taskActivityRecord struct {
 	Content      json.RawMessage `gorm:"type:jsonb;not null;column:content"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-	DeletedAt    *time.Time `gorm:"column:deleted_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at"`
 
 	// Joined from the project_members + users tables (populated by explicit SELECT with JOIN).
 	ActorFullName *string `gorm:"->;column:actor_full_name"`
@@ -45,6 +45,10 @@ func NewTaskActivityRepository(db *gorm.DB) *TaskActivityRepository {
 // --- Mapping helpers --------------------------------------------------------
 
 func activityFromRecord(r taskActivityRecord) *taskdom.Activity {
+	var deletedAt *time.Time
+	if r.DeletedAt.Valid {
+		deletedAt = &r.DeletedAt.Time
+	}
 	a := &taskdom.Activity{
 		ID:           uuid.MustParse(r.ID),
 		TaskID:       uuid.MustParse(r.TaskID),
@@ -52,7 +56,7 @@ func activityFromRecord(r taskActivityRecord) *taskdom.Activity {
 		Content:      r.Content,
 		CreatedAt:    r.CreatedAt,
 		UpdatedAt:    r.UpdatedAt,
-		DeletedAt:    r.DeletedAt,
+		DeletedAt:    deletedAt,
 	}
 	if r.ActorID != nil {
 		id := uuid.MustParse(*r.ActorID)
@@ -143,9 +147,7 @@ func (r *TaskActivityRepository) UpdateActivity(ctx context.Context, a *taskdom.
 
 // DeleteActivity soft-deletes an activity by setting deleted_at.
 func (r *TaskActivityRepository) DeleteActivity(ctx context.Context, id uuid.UUID) error {
-	now := time.Now()
 	return r.db.WithContext(ctx).
-		Table("task_activities").
 		Where("id = ?", id.String()).
-		Update("deleted_at", now).Error
+		Delete(&taskActivityRecord{}).Error
 }
