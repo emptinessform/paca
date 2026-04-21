@@ -86,6 +86,7 @@ export async function setProjectPermissions(
 ): Promise<void> {
 	const session = await getSession(redis, socketId);
 	if (!session) return;
+	session.projectPermissions ??= {};
 	session.projectPermissions[projectId] = permissions;
 	await saveSession(redis, socketId, session);
 }
