@@ -381,8 +381,9 @@ func (s *Service) CreateBranch(ctx context.Context, projectID, taskID, repoID uu
 		)
 		var apiErr *githubclient.APIError
 		if errors.As(err, &apiErr) {
-			// Forward GitHub API errors as structured apierr so the presenter
-			// returns the GitHub message to the client instead of a 500.
+			if apiErr.StatusCode == 403 {
+				return "", githubdom.ErrTokenInsufficientPermissions
+			}
 			return "", apierr.New(apierr.CodeBadRequest, apiErr.Error())
 		}
 		return "", fmt.Errorf("github: create branch: %w", err)

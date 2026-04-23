@@ -204,6 +204,9 @@ const (
 	CodeGitHubWebhookURLNotPublic Code = "GITHUB_WEBHOOK_URL_NOT_PUBLIC"
 	// CodeGitHubBranchAlreadyLinked indicates the branch is already linked to the task.
 	CodeGitHubBranchAlreadyLinked Code = "GITHUB_BRANCH_ALREADY_LINKED"
+	// CodeGitHubTokenInsufficientPermissions indicates the PAT does not have the
+	// required permissions to perform the GitHub API operation (e.g. creating a branch).
+	CodeGitHubTokenInsufficientPermissions Code = "GITHUB_TOKEN_INSUFFICIENT_PERMISSIONS"
 )
 
 // Error carries a machine-readable Code alongside a human-readable Message.

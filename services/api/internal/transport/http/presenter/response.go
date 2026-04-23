@@ -254,6 +254,8 @@ func statusAndCodeFor(err error) (int, apierr.Code) {
 		return http.StatusUnprocessableEntity, apierr.CodeGitHubWebhookURLNotPublic
 	case errors.Is(err, githubdom.ErrBranchAlreadyLinked):
 		return http.StatusConflict, apierr.CodeGitHubBranchAlreadyLinked
+	case errors.Is(err, githubdom.ErrTokenInsufficientPermissions):
+		return http.StatusForbidden, apierr.CodeGitHubTokenInsufficientPermissions
 	default:
 		return http.StatusInternalServerError, apierr.CodeInternalError
 	}
@@ -378,6 +380,8 @@ func httpStatusForCode(code apierr.Code) int {
 		return http.StatusBadRequest
 	case apierr.CodeGitHubWebhookURLNotPublic:
 		return http.StatusUnprocessableEntity
+	case apierr.CodeGitHubTokenInsufficientPermissions:
+		return http.StatusForbidden
 	case apierr.CodeBadRequest:
 		return http.StatusBadRequest
 	case apierr.CodePasswordChangeRequired:

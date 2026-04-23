@@ -194,7 +194,11 @@ function TokenCard({
 				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
 					repo
 				</code>{" "}
-				and{" "}
+				(includes{" "}
+				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
+					contents
+				</code>{" "}
+				permission) and{" "}
 				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
 					admin:repo_hook
 				</code>{" "}

@@ -51,4 +51,8 @@ var (
 
 	// ErrBranchNotFound is returned when a task-branch link does not exist.
 	ErrBranchNotFound = errors.New("github: task branch link not found")
+
+	// ErrTokenInsufficientPermissions is returned when the PAT does not have the
+	// required permissions to perform the GitHub API operation.
+	ErrTokenInsufficientPermissions = errors.New("github: token does not have sufficient permissions")
 )

@@ -22,16 +22,18 @@ import { cn } from "@/lib/utils";
 
 function CopyButton({ text }: { text: string }) {
 	const [copied, setCopied] = useState(false);
-	function copy() {
+	
+  const handleCopy = () => {
 		navigator.clipboard?.writeText(text)?.catch(() => {});
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
-	}
+	};
+
 	return (
 		<button
 			type="button"
 			aria-label="Copy to clipboard"
-			onClick={copy}
+			onClick={handleCopy}
 			className="shrink-0 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
 		>
 			{copied ? (
@@ -140,10 +142,6 @@ function CreateBranchForm({
 
 	// ── Option A: create branch via API ──────────────────────────────────────
 
-	const [createdBranchName, setCreatedBranchName] = useState<string | null>(
-		null,
-	);
-
 	const createMutation = useMutation({
 		mutationFn: () =>
 			createBranch(
@@ -153,11 +151,11 @@ function CreateBranchForm({
 				branchName,
 				sourceBranch || undefined,
 			),
-		onSuccess: (result) => {
-			setCreatedBranchName(result.branch_name);
+		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: taskBranchesQueryOptions(projectId, taskId).queryKey,
 			});
+			onDone();
 		},
 		onError: (err: unknown) => {
 			const code = getApiErrorCode(err);
@@ -171,6 +169,17 @@ function CreateBranchForm({
 			}
 			if (code === ApiErrorCode.GitHubBranchAlreadyLinked) {
 				setError("This branch is already linked to the task.");
+				return;
+			}
+			if (code === ApiErrorCode.GitHubTokenInsufficientPermissions) {
+				setError(
+					"Your GitHub token does not have permission to create branches. Please update it in Project Settings > GitHub with a token that has the repo (contents) scope.",
+				);
+				return;
+			}
+			if (code === ApiErrorCode.BadRequest) {
+				const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+				setError(msg || "Failed to create branch. Please try again.");
 				return;
 			}
 			setError("Failed to create branch. Please try again.");
@@ -197,31 +206,6 @@ function CreateBranchForm({
 		setError(null);
 		if (!validateForm()) return;
 		createMutation.mutate();
-	}
-
-	// After creation — show checkout command + done
-	if (createdBranchName) {
-		const checkoutCmd = `git fetch origin && git checkout ${createdBranchName}`;
-		return (
-			<div className="space-y-2">
-				<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
-					<Check className="size-3.5" />
-					Branch <code className="font-mono">{createdBranchName}</code> created on
-					GitHub.
-				</p>
-				<p className="text-[11px] text-muted-foreground">
-					Check it out locally:
-				</p>
-				<CommandBlock command={checkoutCmd} />
-				<button
-					type="button"
-					className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-1"
-					onClick={onDone}
-				>
-					Done
-				</button>
-			</div>
-		);
 	}
 
 	return (
@@ -300,7 +284,7 @@ function CreateBranchForm({
 			</div>
 
 			{error && (
-				<p className="text-[11px] text-destructive/80">{error}</p>
+				<p className="text-[11px] text-destructive/80 leading-relaxed">{error}</p>
 			)}
 
 			{/* Action buttons */}
