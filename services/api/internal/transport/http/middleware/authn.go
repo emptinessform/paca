@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/paca/api/internal/apierr"
+	apikeydom "github.com/paca/api/internal/domain/apikey"
 	domainauth "github.com/paca/api/internal/domain/auth"
 	jwttoken "github.com/paca/api/internal/platform/token"
 	"github.com/paca/api/internal/transport/http/presenter"
@@ -20,28 +22,54 @@ const claimsKey = "claims"
 // UUID in the Go request context.
 type actorContextKey struct{}
 
+// APIKeyAuthenticator validates a raw API key string and returns the key record.
+// It is satisfied by apikeysvc.Service.
+type APIKeyAuthenticator interface {
+	Authenticate(ctx context.Context, rawKey string) (*apikeydom.APIKey, error)
+}
+
 // Authn validates the access JWT and stores the parsed claims in the Gin
 // context as well as the caller's user UUID in the Go request context so
 // service-layer code can access it without depending on Gin.
 // It first checks the access_token HttpOnly cookie, then falls back to the
-// Authorization: Bearer header for API/CLI clients.
-func Authn(tm *jwttoken.Manager) gin.HandlerFunc {
+// Authorization: Bearer header for API/CLI clients, and finally accepts
+// Authorization: ApiKey or X-API-Key headers for API key authentication.
+func Authn(tm *jwttoken.Manager, apiKeyAuth ...APIKeyAuthenticator) gin.HandlerFunc {
+	var apiKeyAuthenticator APIKeyAuthenticator
+	if len(apiKeyAuth) > 0 {
+		apiKeyAuthenticator = apiKeyAuth[0]
+	}
 	return func(c *gin.Context) {
 		tokenStr := ""
+		isAPIKey := false
 
 		// 1. Try the access_token cookie (browser clients).
 		if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
 			tokenStr = cookie
 		}
 
-		// 2. Fall back to Authorization: Bearer header (API/CLI clients).
+		// 2. Fall back to Authorization header (API/CLI clients).
 		if tokenStr == "" {
 			header := c.GetHeader("Authorization")
 			if header != "" {
 				parts := strings.SplitN(header, " ", 2)
-				if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
-					tokenStr = parts[1]
+				if len(parts) == 2 {
+					switch strings.ToLower(parts[0]) {
+					case "bearer":
+						tokenStr = parts[1]
+					case "apikey":
+						tokenStr = parts[1]
+						isAPIKey = true
+					}
 				}
+			}
+		}
+
+		// 3. Try X-API-Key header.
+		if tokenStr == "" {
+			if v := c.GetHeader("X-API-Key"); v != "" {
+				tokenStr = v
+				isAPIKey = true
 			}
 		}
 
@@ -50,6 +78,32 @@ func Authn(tm *jwttoken.Manager) gin.HandlerFunc {
 			return
 		}
 
+		// --- API key path ---
+		if isAPIKey {
+			if apiKeyAuthenticator == nil {
+				presenter.Error(c, apierr.New(apierr.CodeUnauthenticated, "API key authentication not configured"))
+				return
+			}
+			key, err := apiKeyAuthenticator.Authenticate(c.Request.Context(), tokenStr)
+			if err != nil {
+				presenter.Error(c, apierr.New(apierr.CodeTokenInvalid, "invalid or expired API key"))
+				return
+			}
+			// Build synthetic claims so downstream handlers work unchanged.
+			syntheticClaims := &domainauth.Claims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					Subject: key.UserID.String(),
+				},
+				Kind: "access",
+			}
+			c.Set(claimsKey, syntheticClaims)
+			ctx := context.WithValue(c.Request.Context(), actorContextKey{}, key.UserID)
+			c.Request = c.Request.WithContext(ctx)
+			c.Next()
+			return
+		}
+
+		// --- JWT path ---
 		claims, err := tm.Verify(tokenStr)
 		if err != nil {
 			presenter.Error(c, apierr.New(apierr.CodeTokenInvalid, "invalid or expired token"))

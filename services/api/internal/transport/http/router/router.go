@@ -18,6 +18,7 @@ import (
 // Deps holds all handler and middleware dependencies.
 type Deps struct {
 	TokenManager *jwttoken.Manager
+	APIKeyAuth   httpmw.APIKeyAuthenticator
 	Authorizer   *authz.Authorizer
 	Health       *handler.HealthHandler
 	Auth         *handler.AuthHandler
@@ -32,6 +33,7 @@ type Deps struct {
 	DocFile      *handler.DocFileHandler
 	Notification *handler.NotificationHandler
 	GitHub       *handler.GitHubHandler
+	APIKey       *handler.APIKeyHandler
 	Log          *slog.Logger
 }
 
@@ -56,11 +58,11 @@ func New(deps Deps) *gin.Engine {
 		{
 			auth.POST("/login", deps.Auth.Login)
 			auth.POST("/refresh", deps.Auth.Refresh)
-			auth.POST("/logout", httpmw.Authn(deps.TokenManager), deps.Auth.Logout)
+			auth.POST("/logout", httpmw.Authn(deps.TokenManager, deps.APIKeyAuth), deps.Auth.Logout)
 		}
 
 		users := v1.Group("/users")
-		users.Use(httpmw.Authn(deps.TokenManager))
+		users.Use(httpmw.Authn(deps.TokenManager, deps.APIKeyAuth))
 		{
 			// Password change is allowed even when MustChangePassword=true so
 			// that users can fulfil the forced-change requirement.
@@ -74,6 +76,13 @@ func New(deps Deps) *gin.Engine {
 				me.PATCH("/me", deps.User.UpdateMe)
 				me.GET("/me/global-permissions", deps.User.GetMyGlobalPermissions)
 
+				// API key management
+				if deps.APIKey != nil {
+					me.GET("/me/api-keys", deps.APIKey.List)
+					me.POST("/me/api-keys", deps.APIKey.Create)
+					me.DELETE("/me/api-keys/:keyId", deps.APIKey.Revoke)
+				}
+
 				// Notification routes
 				if deps.Notification != nil {
 					me.GET("/me/notifications", deps.Notification.List)
@@ -84,7 +93,7 @@ func New(deps Deps) *gin.Engine {
 		}
 
 		admin := v1.Group("/admin")
-		admin.Use(httpmw.Authn(deps.TokenManager))
+		admin.Use(httpmw.Authn(deps.TokenManager, deps.APIKeyAuth))
 		admin.Use(httpmw.RequireFreshPassword())
 		{
 			// User management — requires users.* permissions
@@ -139,7 +148,7 @@ func New(deps Deps) *gin.Engine {
 		// Project routes — list/create are collection-level; all other actions are
 		// project-scoped and accessible to members with appropriate roles.
 		projects := v1.Group("/projects")
-		projects.Use(httpmw.Authn(deps.TokenManager))
+		projects.Use(httpmw.Authn(deps.TokenManager, deps.APIKeyAuth))
 		projects.Use(httpmw.RequireFreshPassword())
 		{
 			// Collection routes
