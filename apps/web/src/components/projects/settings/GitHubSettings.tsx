@@ -75,9 +75,9 @@ function TokenCard({
 		onError: (err: unknown) => {
 			const code = getApiErrorCode(err);
 			if (code === ApiErrorCode.GitHubInvalidToken) {
-				setError(
-					"GitHub rejected the token. Check it has the required scopes (repo, admin:repo_hook).",
-				);
+					setError(
+						"GitHub rejected the token. Check it has the required scopes (repo, pull request, admin:repo_hook).",
+					);
 				return;
 			}
 			setError("Failed to save token. Please try again.");
@@ -198,11 +198,15 @@ function TokenCard({
 				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
 					contents
 				</code>{" "}
-				permission) and{" "}
+				and{" "}
+				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
+					pull requests
+				</code>{" "}
+				permissions) and the{" "}
 				<code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
 					admin:repo_hook
 				</code>{" "}
-				scopes to link repositories, create branches, and track pull requests.
+				scope to link repositories, create branches, and track pull requests.
 			</p>
 			<div className="flex gap-2 max-w-lg">
 				<div className="flex-1 relative">
