@@ -76,11 +76,15 @@ func New(deps Deps) *gin.Engine {
 				me.PATCH("/me", deps.User.UpdateMe)
 				me.GET("/me/global-permissions", deps.User.GetMyGlobalPermissions)
 
-				// API key management
+				// API key management -- requires JWT/cookie session auth; API key
+				// credentials are explicitly rejected to prevent privilege escalation
+				// via a leaked API key.
 				if deps.APIKey != nil {
-					me.GET("/me/api-keys", deps.APIKey.List)
-					me.POST("/me/api-keys", deps.APIKey.Create)
-					me.DELETE("/me/api-keys/:keyId", deps.APIKey.Revoke)
+					apiKeys := me.Group("")
+					apiKeys.Use(httpmw.RequireJWTAuth())
+					apiKeys.GET("/me/api-keys", deps.APIKey.List)
+					apiKeys.POST("/me/api-keys", deps.APIKey.Create)
+					apiKeys.DELETE("/me/api-keys/:keyId", deps.APIKey.Revoke)
 				}
 
 				// Notification routes

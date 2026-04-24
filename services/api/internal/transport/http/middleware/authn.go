@@ -17,6 +17,7 @@ import (
 )
 
 const claimsKey = "claims"
+const authMethodKey = "auth_method"
 
 // actorContextKey is the unexported key used to store the authenticated user's
 // UUID in the Go request context.
@@ -97,6 +98,7 @@ func Authn(tm *jwttoken.Manager, apiKeyAuth ...APIKeyAuthenticator) gin.HandlerF
 				Kind: "access",
 			}
 			c.Set(claimsKey, syntheticClaims)
+			c.Set(authMethodKey, "apikey")
 			ctx := context.WithValue(c.Request.Context(), actorContextKey{}, key.UserID)
 			c.Request = c.Request.WithContext(ctx)
 			c.Next()
@@ -159,4 +161,28 @@ func ActorIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 // Use in tests to simulate an authenticated caller.
 func WithActorID(ctx context.Context, actorID uuid.UUID) context.Context {
 	return context.WithValue(ctx, actorContextKey{}, actorID)
+}
+
+// IsAPIKeyAuth reports whether the current request was authenticated via an API
+// key rather than a JWT/cookie session.
+func IsAPIKeyAuth(c *gin.Context) bool {
+	v, exists := c.Get(authMethodKey)
+	if !exists {
+		return false
+	}
+	return v == "apikey"
+}
+
+// RequireJWTAuth rejects requests that were authenticated via an API key.
+// Apply this middleware to sensitive routes (e.g. API key management) that must
+// only be reachable through a JWT/cookie session to prevent privilege escalation
+// via a leaked API key.
+func RequireJWTAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if IsAPIKeyAuth(c) {
+			presenter.Error(c, apierr.New(apierr.CodeForbidden, "this endpoint requires session authentication and does not accept API key credentials"))
+			return
+		}
+		c.Next()
+	}
 }
