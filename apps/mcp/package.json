@@ -1,10 +1,10 @@
 {
-  "name": "@paca-ai/paca",
+  "name": "@paca-ai/paca-mcp",
   "version": "0.1.0",
   "description": "Paca MCP server - Complete API access for AI-powered project management",
   "type": "module",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
+    "registry": "https://registry.npmjs.org",
     "access": "public"
   },
   "bin": {
@@ -14,7 +14,7 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "build": "tsc && node -e \"const fs=require('fs');fs.chmodSync('build/index.js','755');const p=JSON.parse(fs.readFileSync('package.json','utf8'));delete p.scripts;delete p.devDependencies;delete p.files;p.bin={paca:'./index.js'};fs.writeFileSync('build/package.json',JSON.stringify(p,null,2)+'\\n')\"",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
