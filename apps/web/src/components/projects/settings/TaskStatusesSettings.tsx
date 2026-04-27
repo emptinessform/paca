@@ -14,8 +14,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
-	setDefaultTaskStatus,
 	STATUS_CATEGORY_LABELS,
+	setDefaultTaskStatus,
 	type TaskStatus,
 	taskStatusesQueryOptions,
 } from "@/lib/project-api";
@@ -187,9 +187,7 @@ export function TaskStatusesSettings({
 													<Button
 														variant="ghost"
 														size="icon-sm"
-														onClick={() =>
-															setDefaultMutation.mutate(status.id)
-														}
+														onClick={() => setDefaultMutation.mutate(status.id)}
 														disabled={setDefaultMutation.isPending}
 														title="Set as default status"
 														aria-label="Set as default status"
