@@ -35,14 +35,13 @@ const LinkPRToTaskSchema = z.object({
 	projectId: z.string(),
 	taskId: z.string(),
 	prId: z.number(),
-	repositoryName: z.string(),
-	owner: z.string(),
+	repoId: z.string(),
 });
 
 const UnlinkPRFromTaskSchema = z.object({
 	projectId: z.string(),
 	taskId: z.string(),
-	prId: z.number(),
+	prId: z.string(),
 });
 
 const CreateBranchForTaskSchema = z.object({
@@ -195,16 +194,12 @@ export function getTaskGitHubTools(): Tool[] {
 						type: "number",
 						description: "The pull request number",
 					},
-					repositoryName: {
+					repoId: {
 						type: "string",
-						description: "The repository name",
-					},
-					owner: {
-						type: "string",
-						description: "The repository owner",
+						description: "The ID of the repository",
 					},
 				},
-				required: ["projectId", "taskId", "prId", "repositoryName", "owner"],
+				required: ["projectId", "taskId", "prId", "repoId"],
 			},
 		},
 		{
@@ -222,8 +217,8 @@ export function getTaskGitHubTools(): Tool[] {
 						description: "The ID of the task",
 					},
 					prId: {
-						type: "number",
-						description: "The pull request number",
+						type: "string",
+						description: "The ID of the pull request (UUID)",
 					},
 				},
 				required: ["projectId", "taskId", "prId"],
@@ -420,12 +415,12 @@ export async function handleTaskActivityTool(
 
 		case "unlink_pr_from_task": {
 			const { projectId, taskId, prId } = UnlinkPRFromTaskSchema.parse(args);
-			await client.unlinkPRFromTask(projectId, taskId, String(prId));
+			await client.unlinkPRFromTask(projectId, taskId, prId);
 			return {
 				content: [
 					{
 						type: "text",
-						text: `PR #${prId} unlinked successfully`,
+						text: `PR ${prId} unlinked successfully`,
 					},
 				],
 			};

@@ -1,7 +1,5 @@
 import type {
-	CompleteDocUploadInput,
 	CreateFolderInput,
-	DocFile,
 	DocumentActivity,
 	DocumentComment,
 	DocumentFolder,
@@ -193,36 +191,6 @@ export class PacaAPIDocClient {
 	}
 
 	// ==================== Document Files ====================
-
-	async initiateDocUpload(
-		projectId: string,
-		docId: string,
-		fileName: string,
-		fileSize: number,
-		mimeType: string,
-	): Promise<any> {
-		return this.post(
-			`/api/v1/projects/${projectId}/docs/${docId}/files/initiate-upload`,
-			{ file_name: fileName, content_type: mimeType, file_size: fileSize },
-		);
-	}
-
-	async completeDocUpload(
-		projectId: string,
-		docId: string,
-		input: CompleteDocUploadInput,
-	): Promise<DocFile> {
-		const body: any = {
-			file_id: input.upload_id,
-			upload_id: input.upload_id,
-			parts: input.parts,
-		};
-
-		return this.post(
-			`/api/v1/projects/${projectId}/docs/${docId}/files/complete-upload`,
-			body,
-		);
-	}
 
 	async getDocFileDownloadURL(
 		projectId: string,

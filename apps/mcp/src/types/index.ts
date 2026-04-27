@@ -285,51 +285,6 @@ export interface DocumentComment {
 	updated_at: string;
 }
 
-// ==================== Document Files ====================
-
-export interface DocFile {
-	id: string;
-	file_name: string;
-	content_type: string;
-	file_size: number;
-	created_at: string;
-}
-
-export interface DocUploadSession {
-	file_id: string;
-	is_multipart: boolean;
-	upload_url?: string;
-	multipart?: {
-		upload_id: string;
-		parts: Array<{
-			part_number: number;
-			upload_url: string;
-		}>;
-	};
-}
-
-export interface InitiateDocUploadResponse {
-	upload_id: string;
-	upload_url: string;
-	key: string;
-}
-
-export interface CompleteDocUploadInput {
-	upload_id: string;
-	key: string;
-	file_name: string;
-	file_size: number;
-	content_type: string;
-	parts?: Array<{
-		part_number: number;
-		etag: string;
-	}>;
-}
-
-export interface DownloadURLResult {
-	url: string;
-}
-
 // ==================== Project Members ====================
 
 export interface ProjectMember {

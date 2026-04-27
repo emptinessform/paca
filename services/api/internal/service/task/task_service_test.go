@@ -20,14 +20,14 @@ import (
 // ---------------------------------------------------------------------------
 
 type fakeTaskRepo struct {
-	mu                  sync.RWMutex
-	types               map[uuid.UUID]*taskdom.TaskType
-	statuses            map[uuid.UUID]*taskdom.TaskStatus
-	tasks               map[uuid.UUID]*taskdom.Task
-	customFields        map[uuid.UUID]*taskdom.CustomFieldDefinition
-	counters            map[uuid.UUID]int64 // project-scoped task number counters
-	bddScenarios        map[uuid.UUID]*taskdom.BDDScenario
-	findDefaultTypeErr  error // injected error for FindDefaultTaskType
+	mu                   sync.RWMutex
+	types                map[uuid.UUID]*taskdom.TaskType
+	statuses             map[uuid.UUID]*taskdom.TaskStatus
+	tasks                map[uuid.UUID]*taskdom.Task
+	customFields         map[uuid.UUID]*taskdom.CustomFieldDefinition
+	counters             map[uuid.UUID]int64 // project-scoped task number counters
+	bddScenarios         map[uuid.UUID]*taskdom.BDDScenario
+	findDefaultTypeErr   error // injected error for FindDefaultTaskType
 	findDefaultStatusErr error // injected error for FindDefaultTaskStatus
 }
 
