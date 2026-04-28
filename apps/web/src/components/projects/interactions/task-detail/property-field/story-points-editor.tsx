@@ -33,7 +33,15 @@ export function StoryPointsEditor({
 
 	const commit = (raw: string) => {
 		const trimmed = raw.trim();
-		const next = trimmed === "" ? null : Math.max(0, Number(trimmed));
+		if (trimmed === "") {
+			if (value !== null) onChange?.(null);
+			return;
+		}
+
+		const parsed = Number(trimmed);
+		if (!Number.isFinite(parsed)) return;
+
+		const next = Math.trunc(Math.max(0, parsed));
 		if (next !== value) onChange?.(next);
 	};
 
