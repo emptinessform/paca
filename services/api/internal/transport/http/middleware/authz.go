@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/paca/api/internal/apierr"
-	"github.com/paca/api/internal/domain/project"
+	projectdom "github.com/paca/api/internal/domain/project"
 	"github.com/paca/api/internal/platform/authz"
 	"github.com/paca/api/internal/transport/http/presenter"
 )
