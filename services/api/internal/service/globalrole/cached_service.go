@@ -99,5 +99,12 @@ func (c *CachedService) Delete(ctx context.Context, id uuid.UUID) error {
 
 // ReplaceUserRoles delegates directly to the underlying service and invalidates the list cache.
 func (c *CachedService) ReplaceUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) ([]*globalroledom.GlobalRole, error) {
-	return c.svc.ReplaceUserRoles(ctx, userID, roleIDs)
+	rs, err := c.svc.ReplaceUserRoles(ctx, userID, roleIDs)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.st.Delete(ctx, globalRolesKey); err != nil {
+		c.log.WarnContext(ctx, "cache: ReplaceUserRoles delete", "err", err)
+	}
+	return rs, nil
 }
