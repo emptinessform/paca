@@ -179,6 +179,27 @@ func TestCachedSprint_GetSprint_CacheHit(t *testing.T) {
 	}
 }
 
+func TestCachedSprint_GetSprint_CacheHit_ProjectMismatchReturnsNotFound(t *testing.T) {
+	ctx := context.Background()
+	projectA := uuid.New()
+	projectB := uuid.New()
+	sprintID := uuid.New()
+	stub := &stubSprintSvc{}
+	svc := sprintsvc.NewCachedSprintService(stub, newCacheStore(t), 2*time.Minute, discardLogger())
+
+	if _, err := svc.GetSprint(ctx, projectA, sprintID); err != nil {
+		t.Fatalf("GetSprint (seed cache): %v", err)
+	}
+
+	got, err := svc.GetSprint(ctx, projectB, sprintID)
+	if !errors.Is(err, sprintdom.ErrSprintNotFound) {
+		t.Fatalf("expected ErrSprintNotFound for cached sprint requested under wrong project, got sprint=%v err=%v", got, err)
+	}
+	if got != nil {
+		t.Fatalf("expected no sprint on project mismatch, got %#v", got)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // CachedSprintService – write invalidation
 // ---------------------------------------------------------------------------
