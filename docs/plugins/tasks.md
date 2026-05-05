@@ -32,9 +32,9 @@
 
 ## Epic 3 — Plugin SDK
 
-- [ ] **PLUG-SDK-01** Create `plugins/sdk/frontend/` TypeScript package `@paca/plugin-sdk` (`PluginApiClient`, `PluginUI` with `toast/confirm/navigate`, `PluginMeta`, all extension point prop interfaces, shared types `TaskSummary`/`ProjectPermissions`/`TaskFilters`, `PluginQueryClientProvider` + `usePluginQuery`)
-- [ ] **PLUG-SDK-02** Create `plugins/sdk/backend/` Go package `github.com/paca/plugin-sdk` (`Plugin` interface, `plugin.Run()` dispatcher, `Context` with route/event registration, `RouteHandler` with `Request`/`Response`/`CallerIdentity`, `EventHandler`, `DB` typed query builder, `KV` store, `Logger`, `plugin.JSONBody()` helper)
-- [ ] **PLUG-SDK-03** Create `plugintest` package for Go unit testing (`plugintest.NewContext()`, `plugintest.Request`, `plugintest.NewResponse()`, in-memory DB seed helpers)
+- [x] **PLUG-SDK-01** Create `plugins/sdk/frontend/` TypeScript package `@paca/plugin-sdk` (`PluginApiClient`, `PluginUI` with `toast/confirm/navigate`, `PluginMeta`, all extension point prop interfaces, shared types `TaskSummary`/`ProjectPermissions`/`TaskFilters`, `PluginQueryClientProvider` + `usePluginQuery`)
+- [x] **PLUG-SDK-02** Create `plugins/sdk/backend/` Go package `github.com/paca/plugin-sdk` (`Plugin` interface, `plugin.Run()` dispatcher, `Context` with route/event registration, `RouteHandler` with `Request`/`Response`/`CallerIdentity`, `EventHandler`, `DB` typed query builder, `KV` store, `Logger`, `plugin.JSONBody()` helper)
+- [x] **PLUG-SDK-03** Create `plugintest` package for Go unit testing (`plugintest.NewContext()`, `plugintest.Request`, `plugintest.NewResponse()`, in-memory DB seed helpers)
 
 ---
 
