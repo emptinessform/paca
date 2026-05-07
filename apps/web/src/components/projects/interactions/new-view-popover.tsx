@@ -45,9 +45,7 @@ export function NewViewPopover({
 	});
 
 	const activeLabel =
-		selected.type === "builtin"
-			? selected.layout
-			: selected.registration.label;
+		selected.type === "builtin" ? selected.layout : selected.registration.label;
 
 	const submit = async () => {
 		if (selected.type === "builtin") {
