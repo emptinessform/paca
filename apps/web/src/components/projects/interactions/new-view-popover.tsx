@@ -6,8 +6,8 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import type { PluginRegistration } from "@/lib/plugin-api";
 import type { ViewLayout } from "@/lib/interaction-api";
+import type { PluginRegistration } from "@/lib/plugin-api";
 import { cn } from "@/lib/utils";
 
 interface NewViewPopoverProps {

@@ -52,8 +52,8 @@ import {
 	viewsByContextQueryOptions,
 	viewTaskPositionsQueryOptions,
 } from "@/lib/interaction-api";
-import { RemoteComponent } from "@/lib/plugins/loader";
 import type { PluginRegistration } from "@/lib/plugin-api";
+import { RemoteComponent } from "@/lib/plugins/loader";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 import {
 	customFieldsQueryOptions,
@@ -1040,7 +1040,11 @@ export function InteractionLayout({
 					{canManageViews && (
 						<NewViewPopover
 							onSubmit={(name, layout, pluginRegistration) =>
-								createViewMutation.mutateAsync({ name, layout, pluginRegistration })
+								createViewMutation.mutateAsync({
+									name,
+									layout,
+									pluginRegistration,
+								})
 							}
 							isPending={createViewMutation.isPending}
 							pluginRegistrations={pluginViewRegistrations}

@@ -188,8 +188,8 @@ func TestCreateSprint_SeedsDefaultViews(t *testing.T) {
 			boardView = v
 		case sprintdom.ViewTypeTable:
 			tableView = v
-		case sprintdom.ViewTypeRoadmap:
-			// roadmap views are not seeded for sprint defaults
+		case sprintdom.ViewTypeRoadmap, sprintdom.ViewTypePlugin:
+			// roadmap and plugin views are not seeded for sprint defaults
 		}
 	}
 	if boardView == nil || tableView == nil {
