@@ -63,9 +63,9 @@ function DraggableItem({
 		>
 			<GripVertical className="size-4 text-muted-foreground/40 shrink-0 cursor-grab active:cursor-grabbing" />
 			<div className="flex-1 min-w-0">
-				<p className="text-sm font-medium truncate">{reg.pluginName}</p>
+				<p className="text-sm font-medium truncate">{reg.label}</p>
 				<p className="text-xs text-muted-foreground truncate">
-					{EXTENSION_POINT_LABELS[point]}
+					{reg.pluginName} · {EXTENSION_POINT_LABELS[point]}
 				</p>
 			</div>
 			<button

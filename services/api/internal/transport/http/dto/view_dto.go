@@ -39,6 +39,10 @@ type ViewConfigDTO struct {
 	FieldSum  string          `json:"field_sum,omitempty"`
 	SliceBy   string          `json:"slice_by,omitempty"`
 	Filters   *ViewFiltersDTO `json:"filters,omitempty"`
+	// PluginManifestID is the reverse-DNS plugin manifest identifier
+	// (for example "com.paca.checklist").
+	PluginManifestID string `json:"plugin_manifest_id,omitempty"`
+	PluginComponent  string `json:"plugin_component,omitempty"`
 }
 
 // ViewResponse is the public representation of a sprint view.
@@ -63,13 +67,15 @@ func ViewFromEntity(v *sprintdom.SprintView) ViewResponse {
 		Name:      v.Name,
 		ViewType:  v.ViewType,
 		Config: ViewConfigDTO{
-			Fields:    v.Config.Fields,
-			ColumnBy:  v.Config.ColumnBy,
-			Swimlanes: v.Config.Swimlanes,
-			SortBy:    v.Config.SortBy,
-			FieldSum:  v.Config.FieldSum,
-			SliceBy:   v.Config.SliceBy,
-			Filters:   v.Config.Filters,
+			Fields:           v.Config.Fields,
+			ColumnBy:         v.Config.ColumnBy,
+			Swimlanes:        v.Config.Swimlanes,
+			SortBy:           v.Config.SortBy,
+			FieldSum:         v.Config.FieldSum,
+			SliceBy:          v.Config.SliceBy,
+			Filters:          v.Config.Filters,
+			PluginManifestID: v.Config.PluginID,
+			PluginComponent:  v.Config.PluginComponent,
 		},
 		Position:  v.Position,
 		CreatedAt: v.CreatedAt,
@@ -83,13 +89,15 @@ func toViewConfig(d *ViewConfigDTO) sprintdom.ViewConfig {
 		return sprintdom.ViewConfig{}
 	}
 	return sprintdom.ViewConfig{
-		Fields:    d.Fields,
-		ColumnBy:  d.ColumnBy,
-		Swimlanes: d.Swimlanes,
-		SortBy:    d.SortBy,
-		FieldSum:  d.FieldSum,
-		SliceBy:   d.SliceBy,
-		Filters:   d.Filters,
+		Fields:          d.Fields,
+		ColumnBy:        d.ColumnBy,
+		Swimlanes:       d.Swimlanes,
+		SortBy:          d.SortBy,
+		FieldSum:        d.FieldSum,
+		SliceBy:         d.SliceBy,
+		Filters:         d.Filters,
+		PluginID:        d.PluginManifestID,
+		PluginComponent: d.PluginComponent,
 	}
 }
 
