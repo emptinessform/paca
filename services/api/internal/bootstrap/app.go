@@ -12,36 +12,38 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Paca-AI/api/internal/config"
+	globalroledom "github.com/Paca-AI/api/internal/domain/globalrole"
+	userdom "github.com/Paca-AI/api/internal/domain/user"
+	"github.com/Paca-AI/api/internal/platform/authz"
+	"github.com/Paca-AI/api/internal/platform/cache"
+	"github.com/Paca-AI/api/internal/platform/database"
+	"github.com/Paca-AI/api/internal/platform/logger"
+	"github.com/Paca-AI/api/internal/platform/messaging"
+	pluginrt "github.com/Paca-AI/api/internal/platform/plugin"
+	"github.com/Paca-AI/api/internal/platform/secret"
+	"github.com/Paca-AI/api/internal/platform/storage"
+	jwttoken "github.com/Paca-AI/api/internal/platform/token"
+	pgRepo "github.com/Paca-AI/api/internal/repository/postgres"
+	redisRepo "github.com/Paca-AI/api/internal/repository/redis"
+	apikeysvc "github.com/Paca-AI/api/internal/service/apikey"
+	attachmentsvc "github.com/Paca-AI/api/internal/service/attachment"
+	authsvc "github.com/Paca-AI/api/internal/service/auth"
+	docsvc "github.com/Paca-AI/api/internal/service/doc"
+	githubsvc "github.com/Paca-AI/api/internal/service/github"
+	globalrolesvc "github.com/Paca-AI/api/internal/service/globalrole"
+	notificationsvc "github.com/Paca-AI/api/internal/service/notification"
+	pluginsvc "github.com/Paca-AI/api/internal/service/plugin"
+	projectsvc "github.com/Paca-AI/api/internal/service/project"
+	sprintsvc "github.com/Paca-AI/api/internal/service/sprint"
+	tasksvc "github.com/Paca-AI/api/internal/service/task"
+	usersvc "github.com/Paca-AI/api/internal/service/user"
+	"github.com/Paca-AI/api/internal/transport/http/handler"
+	"github.com/Paca-AI/api/internal/transport/http/router"
+	"github.com/Paca-AI/api/internal/worker"
+	"github.com/Paca-AI/api/migrations"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/paca/api/internal/config"
-	globalroledom "github.com/paca/api/internal/domain/globalrole"
-	userdom "github.com/paca/api/internal/domain/user"
-	"github.com/paca/api/internal/platform/authz"
-	"github.com/paca/api/internal/platform/cache"
-	"github.com/paca/api/internal/platform/database"
-	"github.com/paca/api/internal/platform/logger"
-	"github.com/paca/api/internal/platform/messaging"
-	"github.com/paca/api/internal/platform/secret"
-	"github.com/paca/api/internal/platform/storage"
-	jwttoken "github.com/paca/api/internal/platform/token"
-	pgRepo "github.com/paca/api/internal/repository/postgres"
-	redisRepo "github.com/paca/api/internal/repository/redis"
-	apikeysvc "github.com/paca/api/internal/service/apikey"
-	attachmentsvc "github.com/paca/api/internal/service/attachment"
-	authsvc "github.com/paca/api/internal/service/auth"
-	docsvc "github.com/paca/api/internal/service/doc"
-	githubsvc "github.com/paca/api/internal/service/github"
-	globalrolesvc "github.com/paca/api/internal/service/globalrole"
-	notificationsvc "github.com/paca/api/internal/service/notification"
-	projectsvc "github.com/paca/api/internal/service/project"
-	sprintsvc "github.com/paca/api/internal/service/sprint"
-	tasksvc "github.com/paca/api/internal/service/task"
-	usersvc "github.com/paca/api/internal/service/user"
-	"github.com/paca/api/internal/transport/http/handler"
-	"github.com/paca/api/internal/transport/http/router"
-	"github.com/paca/api/internal/worker"
-	"github.com/paca/api/migrations"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -181,6 +183,56 @@ func New(cfg *config.Config) (*App, error) {
 		githubHandler = handler.NewGitHubHandler(githubService)
 	}
 
+	// --- Plugin infrastructure ----------------------------------------------
+	// Get the underlying *sql.DB for plugin-scoped operations (migration runner
+	// and DB host function bridge both need raw database/sql, not GORM).
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("bootstrap: plugin: get sql.DB: %w", err)
+	}
+
+	pluginStore, err := pluginrt.NewStore(context.Background(), pluginrt.StoreConfig{
+		Store:    cfg.Plugins.Store,
+		WASMDir:  cfg.Plugins.WASMDir,
+		S3Bucket: cfg.Storage.Bucket,
+		S3Prefix: cfg.Plugins.S3Prefix,
+		S3Region: cfg.Storage.Region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("bootstrap: plugin store: %w", err)
+	}
+
+	pluginMigrationRunner := pluginrt.NewMigrationRunner(sqlDB, pluginStore, log)
+
+	pluginRuntime := pluginrt.NewRuntime(pluginStore, pluginrt.HostServices{
+		DB:        sqlDB,
+		Log:       log,
+		Publisher: publisher,
+	}, pluginrt.DefaultResourceLimits(), log)
+
+	pluginRepo := pgRepo.NewPluginRepository(db)
+	pluginService := pluginsvc.New(pluginRepo)
+
+	// Load all enabled plugins from the DB into the WASM runtime.
+	installedPlugins, err := pluginService.ListPlugins(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("bootstrap: plugin: list: %w", err)
+	}
+	// Run per-plugin DB migrations before loading WASM modules.
+	for _, p := range installedPlugins {
+		if !p.Enabled {
+			continue
+		}
+		if err := pluginMigrationRunner.Run(context.Background(), p.Name); err != nil {
+			log.Error("plugin: migration failed", "name", p.Name, "error", err)
+		}
+	}
+	if err := pluginRuntime.LoadAll(context.Background(), installedPlugins); err != nil {
+		log.Error("plugin: some plugins failed to load", "error", err)
+	}
+
+	pluginHandler := handler.NewPluginHandler(pluginService, pluginRuntime, projectRepo)
+
 	// --- Handlers -----------------------------------------------------------
 	cookieCfg := handler.CookieConfig{
 		Secure:            cfg.Server.CookieSecure,
@@ -209,6 +261,7 @@ func New(cfg *config.Config) (*App, error) {
 		Notification: handler.NewNotificationHandler(notificationService),
 		GitHub:       githubHandler,
 		APIKey:       handler.NewAPIKeyHandler(apiKeyService),
+		Plugin:       pluginHandler,
 		Log:          log,
 	}
 

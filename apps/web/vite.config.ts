@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import federation from "@originjs/vite-plugin-federation";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -18,6 +19,17 @@ export default defineConfig({
 		}),
 		react(),
 		tailwindcss(),
+		federation({
+			name: "host",
+			remotes: {
+				// Plugin remotes are registered dynamically at runtime via the
+				// PluginRegistryContext — no static remotes are declared here.
+			},
+			shared: {
+				react: { requiredVersion: "^19.0.0" },
+				"react-dom": { requiredVersion: "^19.0.0" },
+			},
+		}),
 	],
 	resolve: {
 		alias: {

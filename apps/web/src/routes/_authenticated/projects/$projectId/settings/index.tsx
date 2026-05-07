@@ -19,6 +19,8 @@ import { TaskStatusesSettings } from "@/components/projects/settings/TaskStatuse
 import { TaskTypesSettings } from "@/components/projects/settings/TaskTypesSettings";
 import { usePermissions } from "@/hooks/use-permissions";
 import { currentUserQueryOptions } from "@/lib/auth-api";
+import { RemoteComponent } from "@/lib/plugins/loader";
+import { usePluginRegistry } from "@/lib/plugins/registry";
 import {
 	customFieldsQueryOptions,
 	type ProjectMember,
@@ -100,6 +102,11 @@ function SettingsPage() {
 	);
 	const canManageTasks = hasPermission("tasks.write") || hasTasksWrite;
 
+	const { getRegistrations } = usePluginRegistry();
+	const pluginTabs = getRegistrations("project.settings.tab").filter(
+		(r) => !r.hidden,
+	);
+
 	const visibleNavItems = canDelete
 		? NAV_ITEMS
 		: NAV_ITEMS.filter((i) => i.id !== "danger");
@@ -112,6 +119,7 @@ function SettingsPage() {
 		| "custom-fields"
 		| "github"
 		| "danger"
+		| string
 	>("general");
 
 	return (
@@ -153,7 +161,7 @@ function SettingsPage() {
 							<button
 								key={id}
 								type="button"
-								onClick={() => setActiveSection(id as typeof activeSection)}
+								onClick={() => setActiveSection(id)}
 								className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
 									activeSection === id
 										? "bg-accent text-foreground"
@@ -163,7 +171,28 @@ function SettingsPage() {
 								<Icon className="size-3.5 shrink-0" />
 								{label}
 							</button>
-						))}{" "}
+						))}
+						{pluginTabs.length > 0 && (
+							<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-3 mt-4 mb-1">
+								Plugins
+							</p>
+						)}
+						{pluginTabs.map((reg) => (
+							<button
+								key={`${reg.pluginId}:${reg.component}`}
+								type="button"
+								onClick={() =>
+									setActiveSection(`plugin:${reg.pluginId}:${reg.component}`)
+								}
+								className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left ${
+									activeSection === `plugin:${reg.pluginId}:${reg.component}`
+										? "bg-accent text-foreground"
+										: "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+								}`}
+							>
+								{reg.pluginName}
+							</button>
+						))}
 					</aside>
 
 					{/* Content */}
@@ -174,7 +203,7 @@ function SettingsPage() {
 								<button
 									key={id}
 									type="button"
-									onClick={() => setActiveSection(id as typeof activeSection)}
+									onClick={() => setActiveSection(id)}
 									className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
 										activeSection === id
 											? "bg-accent text-foreground"
@@ -183,6 +212,22 @@ function SettingsPage() {
 								>
 									<Icon className="size-3 shrink-0" />
 									{label}
+								</button>
+							))}
+							{pluginTabs.map((reg) => (
+								<button
+									key={`${reg.pluginId}:${reg.component}`}
+									type="button"
+									onClick={() =>
+										setActiveSection(`plugin:${reg.pluginId}:${reg.component}`)
+									}
+									className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+										activeSection === `plugin:${reg.pluginId}:${reg.component}`
+											? "bg-accent text-foreground"
+											: "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+									}`}
+								>
+									{reg.pluginName}
 								</button>
 							))}
 						</div>
@@ -219,6 +264,16 @@ function SettingsPage() {
 						)}
 						{activeSection === "danger" && canDelete && (
 							<DangerZone projectId={projectId} />
+						)}
+						{/* Plugin settings tabs */}
+						{pluginTabs.map((reg) =>
+							activeSection === `plugin:${reg.pluginId}:${reg.component}` ? (
+								<RemoteComponent
+									key={`${reg.pluginId}:${reg.component}`}
+									registration={reg}
+									componentProps={{ projectId, canEdit: canEditProject }}
+								/>
+							) : null,
 						)}
 					</div>
 				</div>

@@ -7,19 +7,20 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/Paca-AI/api/internal/apierr"
+	apikeydom "github.com/Paca-AI/api/internal/domain/apikey"
+	attachmentdom "github.com/Paca-AI/api/internal/domain/attachment"
+	domainauth "github.com/Paca-AI/api/internal/domain/auth"
+	docdom "github.com/Paca-AI/api/internal/domain/doc"
+	githubdom "github.com/Paca-AI/api/internal/domain/github"
+	globalroledom "github.com/Paca-AI/api/internal/domain/globalrole"
+	notificationdom "github.com/Paca-AI/api/internal/domain/notification"
+	pluginom "github.com/Paca-AI/api/internal/domain/plugin"
+	projectdom "github.com/Paca-AI/api/internal/domain/project"
+	sprintdom "github.com/Paca-AI/api/internal/domain/sprint"
+	taskdom "github.com/Paca-AI/api/internal/domain/task"
+	userdom "github.com/Paca-AI/api/internal/domain/user"
 	"github.com/gin-gonic/gin"
-	"github.com/paca/api/internal/apierr"
-	apikeydom "github.com/paca/api/internal/domain/apikey"
-	attachmentdom "github.com/paca/api/internal/domain/attachment"
-	domainauth "github.com/paca/api/internal/domain/auth"
-	docdom "github.com/paca/api/internal/domain/doc"
-	githubdom "github.com/paca/api/internal/domain/github"
-	globalroledom "github.com/paca/api/internal/domain/globalrole"
-	notificationdom "github.com/paca/api/internal/domain/notification"
-	projectdom "github.com/paca/api/internal/domain/project"
-	sprintdom "github.com/paca/api/internal/domain/sprint"
-	taskdom "github.com/paca/api/internal/domain/task"
-	userdom "github.com/paca/api/internal/domain/user"
 )
 
 // envelope is the standard JSON wrapper for every response.
@@ -269,6 +270,10 @@ func statusAndCodeFor(err error) (int, apierr.Code) {
 		return http.StatusBadRequest, apierr.CodeAPIKeyNameTooLong
 	case errors.Is(err, apikeydom.ErrForbidden):
 		return http.StatusForbidden, apierr.CodeForbidden
+	case errors.Is(err, pluginom.ErrNotFound):
+		return http.StatusNotFound, apierr.CodePluginNotFound
+	case errors.Is(err, pluginom.ErrNameTaken):
+		return http.StatusConflict, apierr.CodePluginNameTaken
 	default:
 		return http.StatusInternalServerError, apierr.CodeInternalError
 	}
@@ -402,6 +407,10 @@ func httpStatusForCode(code apierr.Code) int {
 		return http.StatusUnauthorized
 	case apierr.CodeAPIKeyNameInvalid, apierr.CodeAPIKeyNameTooLong:
 		return http.StatusBadRequest
+	case apierr.CodePluginNotFound:
+		return http.StatusNotFound
+	case apierr.CodePluginNameTaken:
+		return http.StatusConflict
 	case apierr.CodeBadRequest:
 		return http.StatusBadRequest
 	case apierr.CodePasswordChangeRequired:

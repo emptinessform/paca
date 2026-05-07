@@ -51,6 +51,8 @@ import {
 	viewsByContextQueryOptions,
 	viewTaskPositionsQueryOptions,
 } from "@/lib/interaction-api";
+import { RemoteComponent } from "@/lib/plugins/loader";
+import { usePluginRegistry } from "@/lib/plugins/registry";
 import {
 	customFieldsQueryOptions,
 	findEpicType,
@@ -392,6 +394,18 @@ export function InteractionLayout({
 
 	const activeView = views.find((v) => v.id === preferredViewId) ?? views[0];
 	const activeViewId = activeView?.id ?? "";
+
+	// Plugin views (from the `view` extension point)
+	const { getRegistrations } = usePluginRegistry();
+	const pluginViews = getRegistrations("view").filter((r) => !r.hidden);
+	const [activePluginViewId, setActivePluginViewId] = useState<string | null>(
+		null,
+	);
+	// Resolve the active plugin view registration using composite key
+	const activePluginView =
+		pluginViews.find(
+			(r) => `${r.pluginId}:${r.component}` === activePluginViewId,
+		) ?? null;
 
 	useEffect(() => {
 		if (!activeViewId) return;
@@ -948,7 +962,10 @@ export function InteractionLayout({
 							>
 								<button
 									type="button"
-									onClick={() => setPreferredViewId(view.id)}
+									onClick={() => {
+										setPreferredViewId(view.id);
+										setActivePluginViewId(null);
+									}}
 									className={cn(
 										"flex items-center gap-1.5 px-2.5 py-2.5 text-[12px] font-medium transition-all duration-150",
 										isActive
@@ -1010,6 +1027,27 @@ export function InteractionLayout({
 							isPending={createViewMutation.isPending}
 						/>
 					)}
+					{/* Plugin view tabs */}
+					{pluginViews.map((reg) => {
+						const viewKey = `${reg.pluginId}:${reg.component}`;
+						return (
+							<button
+								key={viewKey}
+								type="button"
+								onClick={() => {
+									setActivePluginViewId(viewKey);
+									setPreferredViewId("");
+								}}
+								className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ${
+									activePluginViewId === viewKey
+										? "bg-accent text-foreground"
+										: "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+								}`}
+							>
+								{reg.pluginName}
+							</button>
+						);
+					})}
 				</div>
 
 				<div className="flex shrink-0 items-center gap-1 pl-3 border-l border-border/25 ml-2">
@@ -1068,7 +1106,22 @@ export function InteractionLayout({
 
 			{/* View content */}
 			<div className="flex flex-1 flex-col overflow-hidden">
-				{tasksLoading ? (
+				{activePluginView ? (
+					<RemoteComponent
+						registration={activePluginView}
+						componentProps={{
+							projectId,
+							tasks: sortedTasks,
+							statuses,
+							taskTypes,
+							members,
+							canCreate,
+							canEdit,
+							searchQuery,
+							onTaskClick: handleTaskClick,
+						}}
+					/>
+				) : tasksLoading ? (
 					activeView?.layout === "Board" ? (
 						<BoardViewSkeleton />
 					) : (
