@@ -17,6 +17,7 @@ export interface BackendManifest {
 export interface ExtensionPointRegistration {
 	point: string;
 	component: string;
+	label?: string;
 	order?: number;
 }
 
@@ -98,6 +99,8 @@ export interface PluginRegistration {
 	pluginUUID: string; // The database UUID for API calls
 	pluginId: string; // The reverse-DNS identifier (e.g., "com.paca.checklist")
 	pluginName: string;
+	/** Per-registration display label from the manifest; falls back to component name. */
+	label: string;
 	remoteEntryUrl: string;
 	component: string;
 	order: number;
@@ -123,6 +126,7 @@ export function buildRegistryMap(
 				pluginUUID: plugin.id, // UUID for API calls
 				pluginId: plugin.manifest.id, // reverse-DNS for display/keys
 				pluginName: plugin.manifest.displayName,
+				label: reg.label ?? reg.component,
 				remoteEntryUrl,
 				component: reg.component,
 				order: reg.order ?? 0,

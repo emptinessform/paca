@@ -47,14 +47,14 @@ export function NewViewPopover({
 	const activeLabel =
 		selected.type === "builtin"
 			? selected.layout
-			: selected.registration.pluginName;
+			: selected.registration.label;
 
 	const submit = async () => {
 		if (selected.type === "builtin") {
 			await onSubmit(name || `New ${selected.layout}`, selected.layout);
 		} else {
 			await onSubmit(
-				name || `New ${selected.registration.pluginName}`,
+				name || `New ${selected.registration.label}`,
 				"Plugin",
 				selected.registration,
 			);
@@ -151,7 +151,7 @@ export function NewViewPopover({
 										)}
 									>
 										<Puzzle className="size-3.5" />
-										{reg.pluginName}
+										{reg.label}
 									</button>
 								);
 							})}
