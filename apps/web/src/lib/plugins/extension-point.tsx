@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ExtensionPointId } from "@/lib/plugin-api";
 import { usePluginRegistry } from "@/lib/plugins/registry";
 import { RemoteComponent } from "./loader";
@@ -14,7 +16,7 @@ export interface ExtensionPointProps {
 	// biome-ignore lint/suspicious/noExplicitAny: forwarded props are plugin-defined
 	componentProps?: Record<string, any>;
 	/** Custom fallback shown while loading (defaults to null). */
-	loadingFallback?: React.ReactNode;
+	loadingFallback?: ReactNode;
 }
 
 /**
@@ -58,7 +60,7 @@ export interface PluginSlotProps {
 	point: ExtensionPointId;
 	// biome-ignore lint/suspicious/noExplicitAny: forwarded props are plugin-defined
 	componentProps?: Record<string, any>;
-	loadingFallback?: React.ReactNode;
+	loadingFallback?: ReactNode;
 }
 
 /**

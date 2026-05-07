@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, GripVertical } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { type DragEvent, useCallback, useRef, useState } from "react";
 
 import {
 	type ExtensionPointId,
@@ -32,8 +32,8 @@ interface DraggableItemProps {
 	index: number;
 	total: number;
 	onToggleHidden: (reg: PluginRegistration) => void;
-	onDragStart: (e: React.DragEvent, index: number) => void;
-	onDragOver: (e: React.DragEvent, index: number) => void;
+	onDragStart: (e: DragEvent, index: number) => void;
+	onDragOver: (e: DragEvent, index: number) => void;
 	onDrop: (index: number) => void;
 	dragOverIndex: number | null;
 }
@@ -104,11 +104,11 @@ function PointSection({
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	const dragIndexRef = useRef<number>(-1);
 
-	const handleDragStart = (_e: React.DragEvent, index: number) => {
+	const handleDragStart = (_e: DragEvent, index: number) => {
 		dragIndexRef.current = index;
 	};
 
-	const handleDragOver = (e: React.DragEvent, index: number) => {
+	const handleDragOver = (e: DragEvent, index: number) => {
 		e.preventDefault();
 		setDragOverIndex(index);
 	};
