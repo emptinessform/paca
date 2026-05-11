@@ -70,20 +70,32 @@ export class PluginRegistry {
 	private readonly loaded: LoadedPlugin[];
 	/** Map from tool name → plugin ID (for fast dispatch). */
 	private readonly toolOwner: Map<string, string>;
+	/** Deduplicated tool definitions contributed by loaded plugins. */
+	private readonly tools: Tool[];
 
 	constructor(loaded: LoadedPlugin[]) {
 		this.loaded = loaded;
 		this.toolOwner = new Map();
+		this.tools = [];
 		for (const p of loaded) {
 			for (const tool of p.entry.tools) {
+				if (this.toolOwner.has(tool.name)) {
+					const existingPluginId = this.toolOwner.get(tool.name);
+					console.warn(
+						`Duplicate plugin MCP tool name "${tool.name}" declared by plugin "${p.pluginId}"; already registered by plugin "${existingPluginId}". Skipping duplicate.`,
+					);
+					continue;
+				}
+
 				this.toolOwner.set(tool.name, p.pluginId);
+				this.tools.push(tool);
 			}
 		}
 	}
 
-	/** All tool definitions contributed by loaded plugins. */
+	/** All unique tool definitions contributed by loaded plugins. */
 	getAllTools(): Tool[] {
-		return this.loaded.flatMap((p) => p.entry.tools);
+		return this.tools;
 	}
 
 	/**
