@@ -94,7 +94,7 @@ function PluginCard({
 	installedVersion?: string;
 	onInstall: (name: string) => void;
 	onUninstall: (name: string) => void;
-	onUpgrade: (pluginId: string) => void;
+	onUpgrade: (pluginName: string) => void;
 }) {
 	const { artifacts } = plugin;
 	const hasBackend = !!artifacts.backend_tar_gz_url;
