@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowUpCircle,
+	Database,
 	Download,
 	ExternalLink,
-	Search,
-	Trash2,
-	Server,
 	LayoutTemplate,
-	Database,
+	Search,
+	Server,
+	Trash2,
 	Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -123,13 +123,13 @@ function PluginCard({
 						</Badge>
 						{isInstalled ? (
 							<Badge className="text-[11px]">Installed</Badge>
-					) : null}
-					{upgradeAvailable ? (
-						<Badge variant="secondary" className="text-[11px] gap-1">
-							<ArrowUpCircle className="size-3" />
-							Update available
-						</Badge>
-					) : null}
+						) : null}
+						{upgradeAvailable ? (
+							<Badge variant="secondary" className="text-[11px] gap-1">
+								<ArrowUpCircle className="size-3" />
+								Update available
+							</Badge>
+						) : null}
 					</div>
 					<p className="text-xs text-muted-foreground truncate">
 						{plugin.name}
@@ -146,13 +146,22 @@ function PluginCard({
 			<div className="space-y-2">
 				<div className="flex items-center gap-1.5 flex-wrap">
 					{hasBackend && (
-						<FeatureBadge icon={<Server className="size-3" />} label="Backend" />
+						<FeatureBadge
+							icon={<Server className="size-3" />}
+							label="Backend"
+						/>
 					)}
 					{hasFrontend && (
-						<FeatureBadge icon={<LayoutTemplate className="size-3" />} label="Frontend" />
+						<FeatureBadge
+							icon={<LayoutTemplate className="size-3" />}
+							label="Frontend"
+						/>
 					)}
 					{hasMigrations && (
-						<FeatureBadge icon={<Database className="size-3" />} label="Migrations" />
+						<FeatureBadge
+							icon={<Database className="size-3" />}
+							label="Migrations"
+						/>
 					)}
 					{hasMCP && (
 						<FeatureBadge icon={<Zap className="size-3" />} label="MCP" />
@@ -183,7 +192,9 @@ function PluginCard({
 									onClick={() => onUpgrade(plugin.name)}
 								>
 									<ArrowUpCircle className="size-4" />
-									{isUpgrading ? "Upgrading..." : `Upgrade to ${plugin.version}`}
+									{isUpgrading
+										? "Upgrading..."
+										: `Upgrade to ${plugin.version}`}
 								</Button>
 							) : null}
 							<Button
