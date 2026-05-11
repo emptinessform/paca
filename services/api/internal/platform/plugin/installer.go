@@ -202,9 +202,9 @@ func (i *Installer) downloadAndExtractTarGz(ctx context.Context, url, dest strin
 
 	// Limit download size to 100MB
 	const maxDownloadSize = 100 * 1024 * 1024
-	limitedReader := io.LimitReader(resp.Body, maxDownloadSize+1)
+	downloadLimitReader := io.LimitReader(resp.Body, maxDownloadSize)
 
-	if err := untarGz(limitedReader, dest, maxDownloadSize); err != nil {
+	if err := untarGz(downloadLimitReader, dest, maxDownloadSize); err != nil {
 		return fmt.Errorf("extract artifact: %w", err)
 	}
 	return nil
@@ -269,8 +269,8 @@ func untarGz(r io.Reader, dest string, maxExtractedSize int64) error {
 			}
 
 			// Limit bytes written per file
-			limitedReader := io.LimitReader(tr, hdr.Size)
-			written, err := io.Copy(f, limitedReader)
+			fileLimitReader := io.LimitReader(tr, hdr.Size)
+			written, err := io.Copy(f, fileLimitReader)
 			if err != nil {
 				_ = f.Close()
 				return err

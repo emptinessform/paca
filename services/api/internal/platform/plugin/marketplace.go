@@ -152,6 +152,11 @@ func validateMarketplacePlugin(p MarketplacePlugin) error {
 
 // validateMarketplaceURL validates that a URL is safe for marketplace operations.
 // It enforces HTTPS and blocks private/internal IP ranges to prevent SSRF attacks.
+//
+// Note: This validation is susceptible to DNS rebinding attacks where a hostname
+// could resolve to a public IP during validation but to a private IP during the
+// actual request. For production deployments, consider implementing DNS pinning
+// or using a dedicated egress proxy with allowlist-based filtering.
 func validateMarketplaceURL(rawURL string) error {
 	u, err := url.Parse(rawURL)
 	if err != nil {
