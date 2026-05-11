@@ -65,7 +65,7 @@ func (i *Installer) Install(ctx context.Context, item MarketplacePlugin) (plugin
 	if err := i.downloadAndExtractTarGz(ctx, item.Artifacts.FrontendTarGzURL, frontendExtract); err != nil {
 		return plugindom.PluginManifest{}, fmt.Errorf("download frontend: %w", err)
 	}
-	if err := i.downloadAndExtractTarGz(ctx, item.Artifacts.MigrationsTarGz, migrationsExtract); err != nil {
+	if err := i.downloadAndExtractTarGz(ctx, item.Artifacts.MigrationsTarGzURL, migrationsExtract); err != nil {
 		return plugindom.PluginManifest{}, fmt.Errorf("download migrations: %w", err)
 	}
 	if err := i.downloadAndExtractTarGz(ctx, item.Artifacts.ManifestTarGzURL, manifestExtract); err != nil {

@@ -123,7 +123,7 @@ func validateMarketplacePlugin(p MarketplacePlugin) error {
 	if strings.TrimSpace(p.Artifacts.FrontendTarGzURL) == "" {
 		return fmt.Errorf("artifacts.frontend_tar_gz_url is required")
 	}
-	if strings.TrimSpace(p.Artifacts.MigrationsTarGz) == "" {
+	if strings.TrimSpace(p.Artifacts.MigrationsTarGzURL) == "" {
 		return fmt.Errorf("artifacts.migrations_tar_gz_url is required")
 	}
 	if strings.TrimSpace(p.Artifacts.ManifestTarGzURL) == "" {

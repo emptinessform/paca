@@ -168,7 +168,7 @@ func MarketplacePluginListResponseFromCatalog(catalog *pluginrt.MarketplaceCatal
 			Artifacts: MarketplacePluginArtifactResponse{
 				BackendTarGzURL:    p.Artifacts.BackendTarGzURL,
 				FrontendTarGzURL:   p.Artifacts.FrontendTarGzURL,
-				MigrationsTarGzURL: p.Artifacts.MigrationsTarGz,
+				MigrationsTarGzURL: p.Artifacts.MigrationsTarGzURL,
 				ManifestTarGzURL:   p.Artifacts.ManifestTarGzURL,
 			},
 		})
