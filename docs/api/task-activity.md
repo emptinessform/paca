@@ -48,8 +48,8 @@ Indexes: `(task_id, created_at)` for efficient chronological listing.
 
 > **Plugin activities**: Installed plugins may emit additional activity types
 > (e.g. `task.bdd_scenario.created`, `task.checklist.created`). Plugin-emitted
-> activities include a `_description` string in their `content` payload for
-> human-readable display.
+> activities should include a `_description` string in their `content`
+> payload for human-readable display.
 
 ---
 
