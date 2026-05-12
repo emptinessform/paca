@@ -149,7 +149,7 @@ console.log("Projects:", result.content);
 
 ## Available Tools
 
-The Paca MCP server provides **86 tools** across **17 categories**:
+The Paca MCP server provides **81 tools** across **16 categories**:
 
 - 📁 **Project Management** (5 tools): Create, read, update, delete projects
 - ✅ **Task Management** (6 tools): Full task lifecycle management
