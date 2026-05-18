@@ -1,13 +1,12 @@
 import { filterSuggestionItems } from "@blocknote/core/extensions";
+import type { BlockNoteEditor } from "@blocknote/core";
 import {
 	type DefaultReactSuggestionItem,
 	SuggestionMenuController,
 } from "@blocknote/react";
 
 interface MentionSuggestionMenuProps {
-	editor: {
-		insertInlineContent: (content: unknown[]) => void;
-	};
+	editor: BlockNoteEditor<any, any, any>;
 	teamMembers: Array<{
 		id: string;
 		name: string;

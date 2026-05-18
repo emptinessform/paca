@@ -13,6 +13,7 @@ export const TeamMention = createReactInlineContentSpec(
 			},
 			avatar: {
 				default: undefined,
+				type: "string" as const,
 			},
 		},
 		content: "none",
