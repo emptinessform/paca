@@ -52,7 +52,10 @@ export const CommentEditor = forwardRef<
 	});
 
 	useImperativeHandle(ref, () => ({
-		getBlocks: () => editor.document as unknown[],
+		getBlocks: () => {
+			const blocks = editor.document as unknown[];
+			return stripTrailingEmptyBlocks(blocks);
+		},
 		focus: () => editor.focus(),
 		clear: () => {
 			editor.removeBlocks(editor.document);
@@ -95,6 +98,7 @@ export function CommentDisplay({ blocks }: CommentDisplayProps) {
 
 	const editor = useCreateBlockNote({
 		schema: customSchema,
+		trailingBlock: false,
 	});
 
 	useEffect(() => {
@@ -148,4 +152,20 @@ export function blocksToText(blocks: unknown[]): string {
 
 export function isBlocksContent(content: unknown): content is unknown[] {
 	return Array.isArray(content);
+}
+
+function stripTrailingEmptyBlocks(blocks: unknown[]): unknown[] {
+	if (!Array.isArray(blocks) || blocks.length === 0) return blocks;
+	const lastBlock = blocks[blocks.length - 1] as { content?: unknown[] };
+	if (hasContent(lastBlock)) return blocks;
+	return blocks.slice(0, -1);
+}
+
+function hasContent(block: { content?: unknown[] }): boolean {
+	if (!block.content || !Array.isArray(block.content)) return false;
+	for (const item of block.content) {
+		const inline = item as { text?: string } | null;
+		if (inline && inline.text && inline.text.trim() !== "") return true;
+	}
+	return false;
 }
