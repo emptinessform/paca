@@ -2,7 +2,7 @@
 #
 # This file is a self-hosting baseline for open-source users who want one
 # deployable stack with the application and its stateful dependencies. Teams
-# running managed PostgreSQL, Aurora DSQL, or Valkey can still use the same images
+# running managed PostgreSQL or Valkey can still use the same images
 # and environment variables as a handoff into their own platform.
 #
 # ── Pre-built images ──────────────────────────────────────────────────────────
@@ -33,8 +33,7 @@
 #     -f deploy/docker-compose.prod.yml up -d --scale minio=0
 #
 # ── Database ────────────────────────────────────────────────────────────────
-# PostgreSQL runs by default (self-hosted). To use Aurora DSQL instead, scale
-# postgres to zero and configure Aurora DSQL settings.
+# PostgreSQL runs by default (self-hosted).
 #
 # Self-hosted with PostgreSQL (default):
 #   # Set POSTGRES_PASSWORD or use the default
@@ -42,8 +41,8 @@
 #     --env-file deploy/.env.production \
 #     -f deploy/docker-compose.prod.yml up -d
 #
-# With Aurora DSQL (PostgreSQL container suppressed):
-#   # Set DATABASE_DRIVER=dsql, DATABASE_AWS_REGION, DATABASE_URL
+# With managed/external PostgreSQL (postgres container suppressed):
+#   # Set DATABASE_URL to your managed PostgreSQL connection string in .env.production
 #   docker compose \
 #     --env-file deploy/.env.production \
 #     -f deploy/docker-compose.prod.yml up -d --scale postgres=0
@@ -88,9 +87,6 @@ services:
       ENV: ${ENVIRONMENT:-production}
       PORT: 8080
       DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-paca}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-paca}?sslmode=disable}
-      # Aurora DSQL — set DATABASE_DRIVER=dsql and DATABASE_AWS_REGION to enable IAM auth.
-      DATABASE_DRIVER: ${DATABASE_DRIVER:-postgres}
-      DATABASE_AWS_REGION: ${DATABASE_AWS_REGION:-}
       REDIS_URL: ${REDIS_URL:-redis://valkey:6379/0}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
@@ -124,7 +120,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-        required: false  # skipped when --scale postgres=0 (Aurora DSQL mode)
+        required: false  # skipped when --scale postgres=0 (managed PostgreSQL mode)
       valkey:
         condition: service_healthy
       minio:
