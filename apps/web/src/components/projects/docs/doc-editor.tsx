@@ -135,7 +135,7 @@ export const DocEditor = forwardRef<DocEditorHandle, DocEditorProps>(
 				localSaveRef.current = true;
 				dirtyRef.current = false;
 				onDirtyChange?.(false);
-				onSave?.(value);
+				onSave?.(cleanedValue);
 			} else {
 				dirtyRef.current = false;
 				onDirtyChange?.(false);
