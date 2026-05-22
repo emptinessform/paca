@@ -136,7 +136,7 @@ export function DescriptionSection({
 		const valueStr = cleanedValue ? JSON.stringify(cleanedValue) : null;
 		if (valueStr !== lastSavedRef.current) {
 			lastSavedRef.current = valueStr;
-			onUpdate?.({ description: value });
+			onUpdate?.({ description: cleanedValue });
 		}
 	}, [canEdit, editor, onUpdate]);
 
