@@ -169,14 +169,18 @@ export function TaskDetailModal({
 						filtered.custom_fields = a;
 					}
 				} else if (key === "description") {
+					const normalizedNewValue = newValue ?? null;
 					const aClean = JSON.stringify(
-						cleanBlocks(newValue as unknown[] | null),
+						cleanBlocks(normalizedNewValue as unknown[] | null),
 					);
 					const bClean = JSON.stringify(
 						cleanBlocks(oldValue as unknown[] | null),
 					);
-					if (aClean !== bClean) {
-						filtered.description = newValue as unknown[] | null;
+					if (
+						aClean !== bClean &&
+						(newValue === null || Array.isArray(newValue))
+					) {
+						filtered.description = newValue;
 					}
 				} else {
 					if (newValue !== oldValue) {
