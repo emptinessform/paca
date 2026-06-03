@@ -140,9 +140,10 @@ func New(cfg *config.Config) (*App, error) {
 	notificationService := notificationsvc.New(notificationRepo, projectRepo, publisher)
 	agentRepo := pgRepo.NewAgentRepository(db)
 	agentService := agentsvc.New(agentRepo, projectService, publisher, pluginRepo)
-	notificationConsumer := worker.NewNotificationConsumer(redisClient, notificationService, log, projectRepo, agentService)
 	activityService := tasksvc.NewActivityService(activityRepo, projectRepo, publisher).
 		WithNotificationService(notificationService)
+	notificationConsumer := worker.NewNotificationConsumer(redisClient, notificationService, log, projectRepo, agentService).
+		WithActivityRecorder(activityService)
 	activityConsumer := worker.NewActivityConsumer(redisClient, activityRepo, projectRepo, log)
 	docService := docsvc.New(docRepo, projectRepo)
 	docActivityService := docsvc.NewActivityService(docRepo, projectRepo, publisher).

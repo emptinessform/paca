@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	Bot,
 	Check,
@@ -17,6 +17,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { ConversationView } from "@/components/projects/agents/conversation-view";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -108,7 +109,9 @@ function OverviewTab({
 	const [systemPrompt, setSystemPrompt] = useState(agent.system_prompt);
 	const [canClone, setCanClone] = useState(agent.can_clone_repos);
 	const [committerName, setCommitterName] = useState(agent.git_committer_name);
-	const [committerEmail, setCommitterEmail] = useState(agent.git_committer_email);
+	const [committerEmail, setCommitterEmail] = useState(
+		agent.git_committer_email,
+	);
 
 	const isDirty =
 		name !== agent.name ||
@@ -135,10 +138,7 @@ function OverviewTab({
 				git_committer_email: committerEmail.trim(),
 			}),
 		onSuccess: (updated) => {
-			qc.setQueryData(
-				["projects", projectId, "agents", agent.id],
-				updated,
-			);
+			qc.setQueryData(["projects", projectId, "agents", agent.id], updated);
 			setLlmApiKey("");
 		},
 	});
@@ -363,8 +363,7 @@ function AddMCPServerDialog({
 								.map((a) => a.trim())
 								.filter(Boolean)
 						: [],
-				url:
-					transport !== "stdio" ? url.trim() || null : null,
+				url: transport !== "stdio" ? url.trim() || null : null,
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({
@@ -525,7 +524,11 @@ function MCPServersTab({
 					<Server className="size-8 text-muted-foreground/40" />
 					<p className="text-sm text-muted-foreground">No MCP servers added</p>
 					{canWrite && (
-						<Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => setAddOpen(true)}
+						>
 							<Plus className="size-3.5 mr-1" />
 							Add your first server
 						</Button>
@@ -541,7 +544,9 @@ function MCPServersTab({
 							<div className="flex items-center gap-3 min-w-0">
 								<Server className="size-4 text-muted-foreground shrink-0" />
 								<div className="min-w-0">
-									<p className="text-sm font-medium truncate">{s.server_name}</p>
+									<p className="text-sm font-medium truncate">
+										{s.server_name}
+									</p>
 									<p className="text-xs text-muted-foreground font-mono truncate">
 										{s.transport}
 										{s.command ? ` · ${s.command}` : ""}
@@ -552,9 +557,7 @@ function MCPServersTab({
 							<div className="flex items-center gap-2 shrink-0">
 								<Switch
 									checked={s.is_enabled}
-									onCheckedChange={() =>
-										canWrite && toggleMutation.mutate(s)
-									}
+									onCheckedChange={() => canWrite && toggleMutation.mutate(s)}
 									disabled={!canWrite || toggleMutation.isPending}
 								/>
 								{canWrite && (
@@ -649,15 +652,15 @@ function AddSkillDialog({
 						<Label>Source</Label>
 						<Select
 							value={source}
-							onValueChange={(v) =>
-								setSource(v as typeof source)
-							}
+							onValueChange={(v) => setSource(v as typeof source)}
 						>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="inline">Inline (write content here)</SelectItem>
+								<SelectItem value="inline">
+									Inline (write content here)
+								</SelectItem>
 								<SelectItem value="marketplace">Marketplace</SelectItem>
 								<SelectItem value="github_url">GitHub URL</SelectItem>
 							</SelectContent>
@@ -762,7 +765,11 @@ function SkillsTab({
 					<Wand2 className="size-8 text-muted-foreground/40" />
 					<p className="text-sm text-muted-foreground">No skills yet</p>
 					{canWrite && (
-						<Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => setAddOpen(true)}
+						>
 							<Plus className="size-3.5 mr-1" />
 							Add first skill
 						</Button>
@@ -822,21 +829,23 @@ function SkillsTab({
 
 function ConversationRow({
 	conv,
+	projectId,
 	onClick,
 }: {
 	conv: AgentConversation;
+	projectId: string;
 	onClick: () => void;
 }) {
 	const statusColor = CONVERSATION_STATUS_COLORS[conv.status];
 	const statusLabel = CONVERSATION_STATUS_LABELS[conv.status];
 
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className="w-full flex items-center gap-4 rounded-lg border border-border/60 bg-card px-4 py-3 text-left transition-colors hover:border-border hover:bg-accent/30"
-		>
-			<div className="flex flex-col gap-0.5 min-w-0 flex-1">
+		<div className="w-full flex items-center gap-4 rounded-lg border border-border/60 bg-card px-4 py-3 transition-colors hover:border-border hover:bg-accent/30">
+			<button
+				type="button"
+				onClick={onClick}
+				className="flex flex-col gap-0.5 min-w-0 flex-1 text-left"
+			>
 				<div className="flex items-center gap-2">
 					<span className="text-sm font-medium truncate">
 						{conv.trigger_type === "chat_message" ? "Chat" : "Task"} ·{" "}
@@ -871,8 +880,38 @@ function ConversationRow({
 						{new Date(conv.created_at).toLocaleDateString()}
 					</span>
 				</div>
-			</div>
-		</button>
+			</button>
+			<Link
+				to="/projects/$projectId/conversations/$conversationId"
+				params={{ projectId, conversationId: conv.id }}
+				className="shrink-0 text-xs font-medium text-primary/70 hover:text-primary transition-colors"
+			>
+				Watch
+			</Link>
+		</div>
+	);
+}
+
+function ConversationModal({
+	projectId,
+	conversationId,
+	open,
+	onOpenChange,
+}: {
+	projectId: string;
+	conversationId: string;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) {
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="max-w-3xl sm:max-w-3xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+				<ConversationView
+					projectId={projectId}
+					conversationId={conversationId}
+				/>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
@@ -886,7 +925,7 @@ function ConversationsTab({
 	const { data: conversations = [], isLoading } = useQuery(
 		conversationsQueryOptions(projectId, agentId),
 	);
-	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [modalConvId, setModalConvId] = useState<string | null>(null);
 
 	if (isLoading) {
 		return (
@@ -913,100 +952,39 @@ function ConversationsTab({
 	}
 
 	return (
-		<div className="space-y-2">
-			{conversations.map((conv) => (
-				<div key={conv.id}>
+		<>
+			<div className="space-y-2">
+				{conversations.map((conv) => (
 					<ConversationRow
+						key={conv.id}
 						conv={conv}
-						onClick={() =>
-							setExpandedId(expandedId === conv.id ? null : conv.id)
-						}
+						projectId={projectId}
+						onClick={() => setModalConvId(conv.id)}
 					/>
-					{expandedId === conv.id && (
-						<ConversationEventList
-							projectId={projectId}
-							conversationId={conv.id}
-						/>
-					)}
-				</div>
-			))}
-		</div>
-	);
-}
-
-function ConversationEventList({
-	projectId,
-	conversationId,
-}: {
-	projectId: string;
-	conversationId: string;
-}) {
-	const { data: events = [], isLoading } = useQuery({
-		queryKey: [
-			"projects",
-			projectId,
-			"conversations",
-			conversationId,
-			"events",
-		],
-		queryFn: async () => {
-			const { listConversationEvents } = await import("@/lib/agent-api");
-			return listConversationEvents(projectId, conversationId);
-		},
-		refetchInterval: 5000,
-	});
-
-	if (isLoading) {
-		return (
-			<div className="ml-4 mt-1 space-y-1">
-				{Array.from({ length: 3 }).map((_, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-					<Skeleton key={i} className="h-8 rounded" />
 				))}
 			</div>
-		);
-	}
 
-	if (events.length === 0) {
-		return (
-			<div className="ml-4 mt-1 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-				No events recorded yet
-			</div>
-		);
-	}
-
-	return (
-		<div className="ml-4 mt-1 rounded-lg border border-border/40 bg-muted/20 divide-y divide-border/40 text-xs font-mono max-h-64 overflow-y-auto">
-			{events.map((ev) => (
-				<div key={ev.id} className="px-3 py-2 flex items-start gap-2">
-					<span className="text-muted-foreground shrink-0 tabular-nums">
-						{ev.event_index.toString().padStart(3, "0")}
-					</span>
-					<span
-						className={
-							ev.event_source === "agent"
-								? "text-primary"
-								: ev.event_source === "user"
-									? "text-amber-500"
-									: "text-muted-foreground"
-						}
-					>
-						{ev.event_type}
-					</span>
-					{!!ev.payload?.message && (
-						<span className="text-foreground/70 truncate">
-							{String(ev.payload.message).slice(0, 120)}
-						</span>
-					)}
-				</div>
-			))}
-		</div>
+			{modalConvId && (
+				<ConversationModal
+					projectId={projectId}
+					conversationId={modalConvId}
+					open
+					onOpenChange={(open) => {
+						if (!open) setModalConvId(null);
+					}}
+				/>
+			)}
+		</>
 	);
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const TABS: {
+	id: Tab;
+	label: string;
+	icon: React.ComponentType<{ className?: string }>;
+}[] = [
 	{ id: "overview", label: "Overview", icon: Bot },
 	{ id: "mcp-servers", label: "MCP Servers", icon: Server },
 	{ id: "skills", label: "Skills", icon: Wand2 },

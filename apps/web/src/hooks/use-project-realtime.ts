@@ -74,6 +74,36 @@ export function useProjectRealtime(projectId: string): void {
 				}
 				return;
 			}
+
+			// agent.* events: invalidate conversation list/events and task activities
+			// (agent.session.started is recorded as a task activity).
+			if (type.startsWith("agent.")) {
+				void queryClient.invalidateQueries({
+					queryKey: ["projects", projectId, "conversations"],
+				});
+				// agent.session.started shows up in task activity feeds
+				if (type === "agent.session.started" || type.startsWith("task.")) {
+					void queryClient.invalidateQueries({
+						queryKey: ["projects", projectId, "tasks"],
+					});
+				}
+				const conversationId =
+					typeof event.payload.conversation_id === "string"
+						? event.payload.conversation_id
+						: null;
+				if (conversationId) {
+					void queryClient.invalidateQueries({
+						queryKey: [
+							"projects",
+							projectId,
+							"conversations",
+							conversationId,
+							"events",
+						],
+					});
+				}
+				return;
+			}
 		}
 
 		socket.on("event", handleEvent);

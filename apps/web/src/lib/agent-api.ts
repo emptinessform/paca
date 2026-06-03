@@ -17,7 +17,8 @@ export const AGENT_PRESETS: AgentPreset[] = [
 	{
 		id: "software-engineer",
 		label: "Software Engineer",
-		description: "An AI agent focused on implementing features and fixing bugs.",
+		description:
+			"An AI agent focused on implementing features and fixing bugs.",
 		defaultLLMProvider: "anthropic",
 		defaultLLMModel: "claude-sonnet-4-5-20250929",
 		defaultSystemPrompt:
@@ -26,7 +27,8 @@ export const AGENT_PRESETS: AgentPreset[] = [
 	{
 		id: "code-reviewer",
 		label: "Code Reviewer",
-		description: "An AI agent that reviews code for quality, bugs, and best practices.",
+		description:
+			"An AI agent that reviews code for quality, bugs, and best practices.",
 		defaultLLMProvider: "anthropic",
 		defaultLLMModel: "claude-sonnet-4-5-20250929",
 		defaultSystemPrompt:
@@ -252,7 +254,12 @@ export async function updateMCPServer(
 	projectId: string,
 	agentId: string,
 	serverId: string,
-	payload: { is_enabled?: boolean; command?: string; args?: string[]; url?: string | null },
+	payload: {
+		is_enabled?: boolean;
+		command?: string;
+		args?: string[];
+		url?: string | null;
+	},
 ): Promise<AgentMCPServer> {
 	const { data } = await apiClient.instance.patch<
 		SuccessEnvelope<AgentMCPServer>
@@ -307,7 +314,11 @@ export async function updateSkill(
 	projectId: string,
 	agentId: string,
 	skillId: string,
-	payload: { is_enabled?: boolean; triggers?: string[]; skill_content?: string },
+	payload: {
+		is_enabled?: boolean;
+		triggers?: string[];
+		skill_content?: string;
+	},
 ): Promise<AgentSkill> {
 	const { data } = await apiClient.instance.patch<SuccessEnvelope<AgentSkill>>(
 		`/projects/${projectId}/agents/${agentId}/skills/${skillId}`,
@@ -357,6 +368,36 @@ export async function listConversationEvents(
 		SuccessEnvelope<{ items: AgentConversationEvent[] }>
 	>(`/projects/${projectId}/conversations/${conversationId}/events`);
 	return data.data.items;
+}
+
+export async function pauseConversation(
+	projectId: string,
+	conversationId: string,
+): Promise<AgentConversation> {
+	const { data } = await apiClient.instance.post<
+		SuccessEnvelope<AgentConversation>
+	>(`/projects/${projectId}/conversations/${conversationId}/pause`);
+	return data.data;
+}
+
+export async function resumeConversation(
+	projectId: string,
+	conversationId: string,
+): Promise<AgentConversation> {
+	const { data } = await apiClient.instance.post<
+		SuccessEnvelope<AgentConversation>
+	>(`/projects/${projectId}/conversations/${conversationId}/resume`);
+	return data.data;
+}
+
+export async function stopConversation(
+	projectId: string,
+	conversationId: string,
+): Promise<AgentConversation> {
+	const { data } = await apiClient.instance.post<
+		SuccessEnvelope<AgentConversation>
+	>(`/projects/${projectId}/conversations/${conversationId}/stop`);
+	return data.data;
 }
 
 // ── Chat Sessions ─────────────────────────────────────────────────────────────
@@ -436,6 +477,16 @@ export const conversationsQueryOptions = (
 		refetchInterval: 10_000,
 	});
 
+export const conversationQueryOptions = (
+	projectId: string,
+	conversationId: string,
+) =>
+	queryOptions({
+		queryKey: ["projects", projectId, "conversations", conversationId],
+		queryFn: () => getConversation(projectId, conversationId),
+		refetchInterval: 5_000,
+	});
+
 export const conversationEventsQueryOptions = (
 	projectId: string,
 	conversationId: string,
@@ -465,9 +516,8 @@ export interface LLMModelsResponse {
 }
 
 export async function listLLMModels(): Promise<LLMModelsResponse> {
-	const { data } = await apiClient.instance.get<LLMModelsResponse>(
-		"/agents/llm-models",
-	);
+	const { data } =
+		await apiClient.instance.get<LLMModelsResponse>("/agents/llm-models");
 	return data;
 }
 

@@ -1,6 +1,7 @@
 """Valkey / Redis stream client and message types."""
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -15,6 +16,8 @@ _client: aioredis.Redis | None = None
 
 TRIGGER_STREAM = "paca:agent:triggers"
 EVENTS_STREAM = "paca:agent:events"
+# Pub/Sub channel consumed by services/realtime for WebSocket fan-out.
+REALTIME_CHANNEL = "paca.events"
 CONSUMER_GROUP = "ai-agent-workers"
 CONSUMER_NAME = "worker-1"
 
@@ -48,6 +51,31 @@ async def publish_event(fields: dict[str, Any]) -> None:
     client = get_client()
     serialized = {k: str(v) for k, v in fields.items()}
     await client.xadd(EVENTS_STREAM, serialized)
+
+
+async def publish_realtime(
+    project_id: str,
+    conversation_id: str,
+    event_type: str = "agent.conversation.event",
+    extra_payload: dict[str, Any] | None = None,
+) -> None:
+    """Publish directly to the paca.events pub/sub channel so the realtime
+    service immediately fans the event out to connected WebSocket clients.
+
+    The realtime service routes any event whose type starts with "agent." to
+    the project tasks room (see permissions.ts), so clients invalidate their
+    conversation query caches and see new messages without waiting for the
+    next poll cycle.
+    """
+    client = get_client()
+    payload: dict[str, Any] = {
+        "project_id": project_id,
+        "conversation_id": conversation_id,
+    }
+    if extra_payload:
+        payload.update(extra_payload)
+    message = json.dumps({"type": event_type, "payload": payload})
+    await client.publish(REALTIME_CHANNEL, message)
 
 
 @dataclass

@@ -34,6 +34,12 @@ const (
 
 	// ActivityTypeComment is a user-authored comment on the task.
 	ActivityTypeComment ActivityType = "comment"
+
+	// --- Agent session events -------------------------------------------------
+
+	// ActivityTypeAgentSessionStarted is recorded when an AI agent begins a
+	// conversation session triggered by a task assignment.
+	ActivityTypeAgentSessionStarted ActivityType = "agent.session.started"
 )
 
 // Activity is a single entry in a task's activity log.  It represents either

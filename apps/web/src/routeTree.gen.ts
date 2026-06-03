@@ -28,6 +28,7 @@ import { Route as AuthenticatedProjectsProjectIdTasksTaskIdRouteImport } from '.
 import { Route as AuthenticatedProjectsProjectIdInteractionsTimelineRouteImport } from './routes/_authenticated/projects/$projectId/interactions/timeline'
 import { Route as AuthenticatedProjectsProjectIdInteractionsBacklogRouteImport } from './routes/_authenticated/projects/$projectId/interactions/backlog'
 import { Route as AuthenticatedProjectsProjectIdDocsDocIdRouteImport } from './routes/_authenticated/projects/$projectId/docs/$docId'
+import { Route as AuthenticatedProjectsProjectIdConversationsConversationIdRouteImport } from './routes/_authenticated/projects/$projectId/conversations/$conversationId'
 import { Route as AuthenticatedProjectsProjectIdAgentsAgentIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/agents/$agentId/index'
 import { Route as AuthenticatedProjectsProjectIdInteractionsSprintsSprintIdRouteImport } from './routes/_authenticated/projects/$projectId/interactions/sprints/$sprintId'
 
@@ -140,6 +141,12 @@ const AuthenticatedProjectsProjectIdDocsDocIdRoute =
     path: '/docs/$docId',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdConversationsConversationIdRoute =
+  AuthenticatedProjectsProjectIdConversationsConversationIdRouteImport.update({
+    id: '/conversations/$conversationId',
+    path: '/conversations/$conversationId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdAgentsAgentIdIndexRoute =
   AuthenticatedProjectsProjectIdAgentsAgentIdIndexRouteImport.update({
     id: '/agents/$agentId/',
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/admin/plugins/': typeof AuthenticatedAdminPluginsIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/conversations/$conversationId': typeof AuthenticatedProjectsProjectIdConversationsConversationIdRoute
   '/projects/$projectId/docs/$docId': typeof AuthenticatedProjectsProjectIdDocsDocIdRoute
   '/projects/$projectId/interactions/backlog': typeof AuthenticatedProjectsProjectIdInteractionsBacklogRoute
   '/projects/$projectId/interactions/timeline': typeof AuthenticatedProjectsProjectIdInteractionsTimelineRoute
@@ -185,6 +193,7 @@ export interface FileRoutesByTo {
   '/admin/plugins': typeof AuthenticatedAdminPluginsIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/conversations/$conversationId': typeof AuthenticatedProjectsProjectIdConversationsConversationIdRoute
   '/projects/$projectId/docs/$docId': typeof AuthenticatedProjectsProjectIdDocsDocIdRoute
   '/projects/$projectId/interactions/backlog': typeof AuthenticatedProjectsProjectIdInteractionsBacklogRoute
   '/projects/$projectId/interactions/timeline': typeof AuthenticatedProjectsProjectIdInteractionsTimelineRoute
@@ -209,6 +218,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/plugins/': typeof AuthenticatedAdminPluginsIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/conversations/$conversationId': typeof AuthenticatedProjectsProjectIdConversationsConversationIdRoute
   '/_authenticated/projects/$projectId/docs/$docId': typeof AuthenticatedProjectsProjectIdDocsDocIdRoute
   '/_authenticated/projects/$projectId/interactions/backlog': typeof AuthenticatedProjectsProjectIdInteractionsBacklogRoute
   '/_authenticated/projects/$projectId/interactions/timeline': typeof AuthenticatedProjectsProjectIdInteractionsTimelineRoute
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/admin/plugins/'
     | '/admin/users/'
     | '/projects/$projectId/'
+    | '/projects/$projectId/conversations/$conversationId'
     | '/projects/$projectId/docs/$docId'
     | '/projects/$projectId/interactions/backlog'
     | '/projects/$projectId/interactions/timeline'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/admin/plugins'
     | '/admin/users'
     | '/projects/$projectId'
+    | '/projects/$projectId/conversations/$conversationId'
     | '/projects/$projectId/docs/$docId'
     | '/projects/$projectId/interactions/backlog'
     | '/projects/$projectId/interactions/timeline'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/plugins/'
     | '/_authenticated/admin/users/'
     | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/conversations/$conversationId'
     | '/_authenticated/projects/$projectId/docs/$docId'
     | '/_authenticated/projects/$projectId/interactions/backlog'
     | '/_authenticated/projects/$projectId/interactions/timeline'
@@ -430,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdDocsDocIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/conversations/$conversationId': {
+      id: '/_authenticated/projects/$projectId/conversations/$conversationId'
+      path: '/conversations/$conversationId'
+      fullPath: '/projects/$projectId/conversations/$conversationId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdConversationsConversationIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/agents/$agentId/': {
       id: '/_authenticated/projects/$projectId/agents/$agentId/'
       path: '/agents/$agentId'
@@ -449,6 +469,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdConversationsConversationIdRoute: typeof AuthenticatedProjectsProjectIdConversationsConversationIdRoute
   AuthenticatedProjectsProjectIdDocsDocIdRoute: typeof AuthenticatedProjectsProjectIdDocsDocIdRoute
   AuthenticatedProjectsProjectIdInteractionsBacklogRoute: typeof AuthenticatedProjectsProjectIdInteractionsBacklogRoute
   AuthenticatedProjectsProjectIdInteractionsTimelineRoute: typeof AuthenticatedProjectsProjectIdInteractionsTimelineRoute
@@ -465,6 +486,8 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
   {
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdConversationsConversationIdRoute:
+      AuthenticatedProjectsProjectIdConversationsConversationIdRoute,
     AuthenticatedProjectsProjectIdDocsDocIdRoute:
       AuthenticatedProjectsProjectIdDocsDocIdRoute,
     AuthenticatedProjectsProjectIdInteractionsBacklogRoute:

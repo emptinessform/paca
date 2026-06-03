@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import json
 import logging
+import threading
 import uuid
 
 import httpx
@@ -66,24 +68,55 @@ def _gather_repo_sources(trigger: TriggerMessage) -> list[RepoInfoSource]:
     return sources
 
 
+# ─── Shared event index ───────────────────────────────────────────────────────
+
+class _AtomicCounter:
+    """Thread-safe monotonic counter shared across event and token callbacks."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._value = 0
+
+    def next(self) -> int:
+        with self._lock:
+            v = self._value
+            self._value += 1
+            return v
+
+
 # ─── Event callback ───────────────────────────────────────────────────────────
 
 
-def _make_event_callback(trigger: TriggerMessage, loop: asyncio.AbstractEventLoop):
-    """Return a synchronous callback invoked by the OpenHands SDK on each event."""
-    idx = itertools.count()
+def _make_event_callback(
+    trigger: TriggerMessage,
+    loop: asyncio.AbstractEventLoop,
+    counter: _AtomicCounter,
+):
+    """Return a synchronous callback invoked by the OpenHands SDK on each complete event.
+
+    Agent MessageEvents are skipped here because _make_token_callback captures
+    the LLM's text output directly from the streaming response, which gives
+    cleaner content without SDK wrapper fields.  All other events (actions,
+    observations, system messages) are saved normally.
+    """
 
     def callback(event) -> None:
-        event_index = next(idx)
-        payload = event.model_dump_json() if hasattr(event, "model_dump_json") else "{}"
         event_type = type(event).__name__
-        event_source = getattr(event, "source", "agent")
+        event_source = str(getattr(event, "source", "agent"))
+
+        # Agent text responses are captured by token_callbacks with richer
+        # streaming data; skip them here to avoid duplicate DB rows.
+        if event_type == "MessageEvent" and event_source == "agent":
+            return
+
+        event_index = counter.next()
+        payload = event.model_dump_json() if hasattr(event, "model_dump_json") else "{}"
 
         async def _persist():
             await conversation_repository.insert_conversation_event(
                 conversation_id=trigger.conversation_id,
                 event_type=event_type,
-                event_source=str(event_source),
+                event_source=event_source,
                 event_index=event_index,
                 payload=payload,
             )
@@ -92,11 +125,16 @@ def _make_event_callback(trigger: TriggerMessage, loop: asyncio.AbstractEventLoo
                     "conversation_id": trigger.conversation_id,
                     "project_id": trigger.project_id,
                     "event_type": event_type,
-                    "event_source": str(event_source),
+                    "event_source": event_source,
                     "event_index": str(event_index),
                     "payload": payload,
                     "status": "running",
                 }
+            )
+            await stream_store.publish_realtime(
+                project_id=trigger.project_id,
+                conversation_id=trigger.conversation_id,
+                event_type=f"agent.{event_type.lower()}",
             )
 
         future = asyncio.run_coroutine_threadsafe(_persist(), loop)
@@ -108,12 +146,99 @@ def _make_event_callback(trigger: TriggerMessage, loop: asyncio.AbstractEventLoo
     return callback
 
 
+# ─── Token (streaming) callback ───────────────────────────────────────────────
+
+
+def _make_token_callback(
+    trigger: TriggerMessage,
+    loop: asyncio.AbstractEventLoop,
+    counter: _AtomicCounter,
+):
+    """Return a token callback that accumulates streaming LLM chunks into complete
+    messages and persists each finished message as a MessageEvent.
+
+    The OpenHands SDK calls this once per streaming chunk.  When finish_reason
+    is set the accumulated content is flushed to the database and a realtime
+    pub/sub notification is published so WebSocket clients update immediately.
+    """
+    lock = threading.Lock()
+    parts_content: list[str] = []
+    parts_reasoning: list[str] = []
+
+    def on_token(stream) -> None:
+        for choice in stream.choices:
+            delta = choice.delta
+            finish_reason = getattr(choice, "finish_reason", None)
+
+            content_chunk = getattr(delta, "content", None) or ""
+            reasoning_chunk = getattr(delta, "reasoning_content", None) or ""
+
+            with lock:
+                if content_chunk:
+                    parts_content.append(content_chunk)
+                if reasoning_chunk:
+                    parts_reasoning.append(reasoning_chunk)
+
+                if finish_reason:
+                    full_content = "".join(parts_content)
+                    full_reasoning = "".join(parts_reasoning)
+                    parts_content.clear()
+                    parts_reasoning.clear()
+
+                    if not full_content and not full_reasoning:
+                        return
+
+                    event_index = counter.next()
+                    payload_obj: dict = {"content": full_content, "source": "agent"}
+                    if full_reasoning:
+                        payload_obj["reasoning_content"] = full_reasoning
+                    payload_str = json.dumps(payload_obj)
+
+                    async def _persist(idx=event_index, p=payload_str):
+                        await conversation_repository.insert_conversation_event(
+                            conversation_id=trigger.conversation_id,
+                            event_type="MessageEvent",
+                            event_source="agent",
+                            event_index=idx,
+                            payload=p,
+                        )
+                        await stream_store.publish_event(
+                            {
+                                "conversation_id": trigger.conversation_id,
+                                "project_id": trigger.project_id,
+                                "event_type": "MessageEvent",
+                                "event_source": "agent",
+                                "event_index": str(idx),
+                                "payload": p,
+                                "status": "running",
+                            }
+                        )
+                        await stream_store.publish_realtime(
+                            project_id=trigger.project_id,
+                            conversation_id=trigger.conversation_id,
+                            event_type="agent.messageevent",
+                        )
+
+                    future = asyncio.run_coroutine_threadsafe(_persist(), loop)
+                    try:
+                        future.result(timeout=10)
+                    except Exception as exc:
+                        logger.warning(
+                            "Token callback persist failed for conversation %s: %s",
+                            trigger.conversation_id,
+                            exc,
+                        )
+
+    return on_token
+
+
 # ─── Main entry point ─────────────────────────────────────────────────────────
 
 
 async def run_conversation(trigger: TriggerMessage, agent_config: AgentConfig) -> None:
     """Execute a single agent conversation end-to-end."""
     loop = asyncio.get_event_loop()
+    counter = _AtomicCounter()
     logger.info("Starting conversation %s (agent=%s)", trigger.conversation_id, trigger.agent_id)
     await conversation_repository.update_conversation_status(trigger.conversation_id, "running")
 
@@ -177,7 +302,8 @@ async def run_conversation(trigger: TriggerMessage, agent_config: AgentConfig) -
                     agent=agent,
                     workspace=workspace,
                     conversation_id=uuid.UUID(trigger.conversation_id),
-                    callbacks=[_make_event_callback(trigger, loop)],
+                    callbacks=[_make_event_callback(trigger, loop, counter)],
+                    token_callbacks=[_make_token_callback(trigger, loop, counter)],
                     max_iteration_per_run=agent_config.max_iterations,
                 )
 
