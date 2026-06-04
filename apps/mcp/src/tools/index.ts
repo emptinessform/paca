@@ -10,8 +10,10 @@ import {
 	getAttachmentTools,
 	handleAttachmentTool,
 } from "./attachment-tools.js";
-import { getDocTools, handleDocTool } from "./doc-github-tools.js";
-import { getDocumentTools, handleDocumentTool } from "./document-tools.js";
+import {
+	getFilesystemDocTools,
+	handleFilesystemDocTool,
+} from "./filesystem-doc-tools.js";
 import {
 	getProjectMemberTools,
 	getProjectRoleTools,
@@ -43,7 +45,7 @@ export function getAllTools(): Tool[] {
 		...getProjectTools(),
 		...getTaskTools(),
 		...getSprintTools(),
-		...getDocumentTools(),
+		...getFilesystemDocTools(),
 		...getProjectMemberTools(),
 		...getProjectRoleTools(),
 		...getTaskTypeTools(),
@@ -51,7 +53,6 @@ export function getAllTools(): Tool[] {
 		...getViewTools(),
 		...getCustomFieldTools(),
 		...getAttachmentTools(),
-		...getDocTools(),
 		...getTaskActivityTools(),
 	];
 }
@@ -114,15 +115,20 @@ export async function handleToolCall(
 			return handleSprintTool(name, args, clients.apiClient);
 		}
 
-		// Document tools
+		// Filesystem document tools
 		if (
-			name === "list_documents" ||
-			name === "get_document" ||
-			name === "create_document" ||
-			name === "update_document" ||
-			name === "delete_document"
+			name === "list_docs" ||
+			name === "read_doc" ||
+			name === "write_doc" ||
+			name === "delete_doc" ||
+			name === "move_doc"
 		) {
-			return handleDocumentTool(name, args, clients.apiClient);
+			return handleFilesystemDocTool(
+				name,
+				args,
+				clients.apiClient,
+				clients.docClient,
+			);
 		}
 
 		// Project member and role tools
@@ -183,18 +189,6 @@ export async function handleToolCall(
 			name === "delete_task_attachment"
 		) {
 			return handleAttachmentTool(name, args, clients.viewsClient);
-		}
-
-		// Document tools
-		if (
-			name === "list_doc_folders" ||
-			name === "create_doc_folder" ||
-			name === "update_doc_folder" ||
-			name === "delete_doc_folder" ||
-			name === "list_doc_snapshots" ||
-			name === "get_doc_snapshot"
-		) {
-			return handleDocTool(name, args, clients.docClient);
 		}
 
 		// Task activity tools

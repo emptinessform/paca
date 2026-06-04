@@ -60,12 +60,6 @@ func EnforcePermissions(c *gin.Context, authorizer *authz.Authorizer, scope Scop
 		return false
 	}
 
-	userID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
-		return false
-	}
-
 	resolver := scope
 	if resolver == nil {
 		resolver = GlobalScope()
@@ -76,7 +70,20 @@ func EnforcePermissions(c *gin.Context, authorizer *authz.Authorizer, scope Scop
 		return false
 	}
 
-	allowed, err := authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, permissions...)
+	agentID, hasAgentID := AgentIDFromGinContext(c)
+
+	var allowed bool
+	if hasAgentID && projectID != nil {
+		allowed, err = authorizer.HasPermissionsForAgent(c.Request.Context(), agentID, *projectID, permissions...)
+	} else {
+		userID, parseErr := uuid.Parse(claims.Subject)
+		if parseErr != nil {
+			presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
+			return false
+		}
+		allowed, err = authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, permissions...)
+	}
+
 	if err != nil {
 		presenter.Error(c, err)
 		return false
@@ -107,6 +114,7 @@ type PermissionGroup struct {
 //
 // Typical use: allow access when the caller holds a broad global permission
 // (e.g. projects.read) OR a narrower project-scoped one.
+// Also supports agent authentication via X-Agent-ID header with the agent API key.
 func RequireAnyPermissions(authorizer *authz.Authorizer, groups ...PermissionGroup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims := ClaimsFrom(c)
@@ -120,10 +128,16 @@ func RequireAnyPermissions(authorizer *authz.Authorizer, groups ...PermissionGro
 			return
 		}
 
-		userID, err := uuid.Parse(claims.Subject)
-		if err != nil {
-			presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
-			return
+		agentID, hasAgentID := AgentIDFromGinContext(c)
+		var userID uuid.UUID
+
+		if !hasAgentID {
+			var parseErr error
+			userID, parseErr = uuid.Parse(claims.Subject)
+			if parseErr != nil {
+				presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
+				return
+			}
 		}
 
 		var firstScopeErr error
@@ -134,14 +148,19 @@ func RequireAnyPermissions(authorizer *authz.Authorizer, groups ...PermissionGro
 			}
 			projectID, err := resolver(c)
 			if err != nil {
-				// Capture the first scope-resolution error; still try remaining groups
-				// (a later global-scope group may succeed without needing projectId).
 				if firstScopeErr == nil {
 					firstScopeErr = err
 				}
 				continue
 			}
-			allowed, err := authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, group.Permissions...)
+
+			var allowed bool
+			if hasAgentID && projectID != nil {
+				allowed, err = authorizer.HasPermissionsForAgent(c.Request.Context(), agentID, *projectID, group.Permissions...)
+			} else {
+				allowed, err = authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, group.Permissions...)
+			}
+
 			if err != nil {
 				presenter.Error(c, err)
 				return
@@ -152,8 +171,6 @@ func RequireAnyPermissions(authorizer *authz.Authorizer, groups ...PermissionGro
 			}
 		}
 
-		// Surface the scope-resolution error (e.g. 400 for an invalid projectId)
-		// rather than hiding it behind a generic 403 Forbidden.
 		if firstScopeErr != nil {
 			presenter.Error(c, firstScopeErr)
 			return
@@ -178,17 +195,25 @@ type ProjectVisibilityChecker interface {
 //
 // Use this instead of RequireAnyPermissions on read-only project-scoped routes
 // that should be accessible to anonymous users when the project is public.
+// Also supports agent authentication via X-Agent-ID header with the agent API key.
 func RequirePublicProjectOrPermissions(checker ProjectVisibilityChecker, authorizer *authz.Authorizer, groups ...PermissionGroup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims := ClaimsFrom(c)
 
-		// Authenticated path: run normal permission check.
-		if claims != nil {
-			userID, err := uuid.Parse(claims.Subject)
-			if err != nil {
+		agentID, hasAgentID := AgentIDFromGinContext(c)
+		var userID uuid.UUID
+
+		if !hasAgentID && claims != nil {
+			var parseErr error
+			userID, parseErr = uuid.Parse(claims.Subject)
+			if parseErr != nil {
 				presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
 				return
 			}
+		}
+
+		// Authenticated path: run normal permission check.
+		if claims != nil {
 			var firstScopeErr error
 			for _, group := range groups {
 				resolver := group.Scope
@@ -202,7 +227,14 @@ func RequirePublicProjectOrPermissions(checker ProjectVisibilityChecker, authori
 					}
 					continue
 				}
-				allowed, err := authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, group.Permissions...)
+
+				var allowed bool
+				if hasAgentID && projectID != nil {
+					allowed, err = authorizer.HasPermissionsForAgent(c.Request.Context(), agentID, *projectID, group.Permissions...)
+				} else {
+					allowed, err = authorizer.HasPermissions(c.Request.Context(), userID, projectID, claims.Role, group.Permissions...)
+				}
+
 				if err != nil {
 					presenter.Error(c, err)
 					return

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	agentdom "github.com/Paca-AI/api/internal/domain/agent"
 	notificationdom "github.com/Paca-AI/api/internal/domain/notification"
 	projectdom "github.com/Paca-AI/api/internal/domain/project"
 	taskdom "github.com/Paca-AI/api/internal/domain/task"
@@ -15,10 +16,17 @@ import (
 	"github.com/google/uuid"
 )
 
-// memberLookup is the minimal interface ActivitySvc needs to resolve a user
-// UUID to a project member UUID.
+// memberLookup is the minimal interface ActivitySvc needs to resolve an actor
+// to a project member UUID.
 type memberLookup interface {
-	FindMemberByUserProject(ctx context.Context, userID, projectID uuid.UUID) (*projectdom.ProjectMember, error)
+	FindMemberByActor(ctx context.Context, projectID, actorID uuid.UUID, agentID *uuid.UUID) (*projectdom.ProjectMember, error)
+	FindMemberByAgent(ctx context.Context, projectID, agentID uuid.UUID) (*projectdom.ProjectMember, error)
+}
+
+// agentCommentTrigger creates an agent conversation when an agent is @-mentioned
+// in a task comment.
+type agentCommentTrigger interface {
+	TriggerCommentMention(ctx context.Context, projectID, agentID, taskID, commentID, triggeredByMemberID uuid.UUID, message string) (*agentdom.AgentConversation, error)
 }
 
 // ActivitySvc implements taskdom.ActivityService (which includes
@@ -28,6 +36,7 @@ type ActivitySvc struct {
 	memberRepo      memberLookup
 	publisher       *messaging.Publisher
 	notificationSvc notificationdom.Service
+	agentTrigger    agentCommentTrigger
 }
 
 // NewActivityService creates a new ActivitySvc backed by repo.
@@ -42,6 +51,13 @@ func NewActivityService(repo taskdom.ActivityRepository, memberRepo memberLookup
 // @mention notifications when comments are created.
 func (s *ActivitySvc) WithNotificationService(svc notificationdom.Service) *ActivitySvc {
 	s.notificationSvc = svc
+	return s
+}
+
+// WithAgentTrigger attaches an agent trigger used to start a conversation when
+// an agent is @-mentioned in a task comment.
+func (s *ActivitySvc) WithAgentTrigger(trigger agentCommentTrigger) *ActivitySvc {
+	s.agentTrigger = trigger
 	return s
 }
 
@@ -66,7 +82,7 @@ func (s *ActivitySvc) RecordActivity(ctx context.Context, in taskdom.RecordActiv
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	s.publishToActivityStream(ctx, a, in.ProjectID)
+	s.publishToActivityStream(ctx, a, in.ProjectID, in.ActorAgentID)
 	return nil
 }
 
@@ -82,7 +98,7 @@ func (s *ActivitySvc) AddComment(ctx context.Context, in taskdom.AddCommentInput
 	if isContentEmpty(in.Content) || !isContentTypeValid(in.Content) {
 		return nil, taskdom.ErrCommentContentInvalid
 	}
-	member, err := s.memberRepo.FindMemberByUserProject(ctx, in.ActorID, in.ProjectID)
+	member, err := s.memberRepo.FindMemberByActor(ctx, in.ProjectID, in.ActorID, in.AgentID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,36 +117,66 @@ func (s *ActivitySvc) AddComment(ctx context.Context, in taskdom.AddCommentInput
 	}
 	s.publishRealtimeOnly(ctx, events.TopicTaskCommentAdded, activityPayload(a, in.ProjectID))
 
-	if s.notificationSvc != nil {
+	if s.notificationSvc != nil || s.agentTrigger != nil {
 		// Extract mentions from BlockNote JSON and notify mentioned users.
 		// Fall back to plain-text parsing when no structured mentions exist,
 		// to preserve compatibility with manually typed @mentions and legacy clients.
 		commentText := extractTextFromBlocks(in.Content)
 		teamMentions := mentionpkg.ExtractTeamMentionsFromBlocks(in.Content)
 		if len(teamMentions) == 0 {
-			_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
-				TaskID:          in.TaskID,
-				ProjectID:       in.ProjectID,
-				CommentText:     commentText,
-				ActorMemberID:   member.ID,
-				ActorUserID:     in.ActorID,
-				MentionedUserID: nil,
-			})
-		} else {
-			for _, m := range teamMentions {
-				mentionedUserID, err := uuid.Parse(m.ID)
-				if err != nil {
-					continue // invalid UUID, skip
-				}
-
+			if s.notificationSvc != nil {
 				_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
 					TaskID:          in.TaskID,
 					ProjectID:       in.ProjectID,
 					CommentText:     commentText,
 					ActorMemberID:   member.ID,
 					ActorUserID:     in.ActorID,
-					MentionedUserID: &mentionedUserID,
+					MentionedUserID: nil,
 				})
+			}
+		} else {
+			for _, m := range teamMentions {
+				mentionedID, err := uuid.Parse(m.ID)
+				if err != nil {
+					continue // invalid UUID, skip
+				}
+
+				// For agent members the web UI embeds agent_id (not user_id) as
+				// the mention id. Try to resolve it as an agent member first; if
+				// found, trigger a conversation instead of a human notification.
+				if s.agentTrigger != nil {
+					agentMember, agentErr := s.memberRepo.FindMemberByAgent(ctx, in.ProjectID, mentionedID)
+					if agentErr == nil && agentMember.IsAgent() && agentMember.AgentID != nil {
+						conv, _ := s.agentTrigger.TriggerCommentMention(ctx, in.ProjectID, *agentMember.AgentID, in.TaskID, a.ID, member.ID, commentText)
+						if conv != nil {
+							content, _ := json.Marshal(map[string]any{
+								"conversation_id": conv.ID.String(),
+								"agent_id":        agentMember.AgentID.String(),
+							})
+							agentID := *agentMember.AgentID
+							_ = s.RecordActivity(ctx, taskdom.RecordActivityInput{
+								TaskID:       in.TaskID,
+								ProjectID:    in.ProjectID,
+								ActorAgentID: &agentID,
+								ActivityType: taskdom.ActivityTypeAgentSessionStarted,
+								Content:      content,
+							})
+						}
+						continue
+					}
+				}
+
+				// Human user mention — send an in-app notification.
+				if s.notificationSvc != nil {
+					_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
+						TaskID:          in.TaskID,
+						ProjectID:       in.ProjectID,
+						CommentText:     commentText,
+						ActorMemberID:   member.ID,
+						ActorUserID:     in.ActorID,
+						MentionedUserID: &mentionedID,
+					})
+				}
 			}
 		}
 	}
@@ -139,7 +185,7 @@ func (s *ActivitySvc) AddComment(ctx context.Context, in taskdom.AddCommentInput
 }
 
 // UpdateComment edits the content of an existing comment.
-func (s *ActivitySvc) UpdateComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, content json.RawMessage) (*taskdom.Activity, error) {
+func (s *ActivitySvc) UpdateComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, agentID *uuid.UUID, content json.RawMessage) (*taskdom.Activity, error) {
 	if isContentEmpty(content) || !isContentTypeValid(content) {
 		return nil, taskdom.ErrCommentContentInvalid
 	}
@@ -150,7 +196,7 @@ func (s *ActivitySvc) UpdateComment(ctx context.Context, id uuid.UUID, projectID
 	if a.ActivityType != taskdom.ActivityTypeComment {
 		return nil, taskdom.ErrActivityNotAComment
 	}
-	member, err := s.memberRepo.FindMemberByUserProject(ctx, actorID, projectID)
+	member, err := s.memberRepo.FindMemberByActor(ctx, projectID, actorID, agentID)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +213,7 @@ func (s *ActivitySvc) UpdateComment(ctx context.Context, id uuid.UUID, projectID
 }
 
 // DeleteComment soft-deletes a comment.
-func (s *ActivitySvc) DeleteComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID) error {
+func (s *ActivitySvc) DeleteComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, agentID *uuid.UUID) error {
 	a, err := s.repo.FindActivityByID(ctx, id)
 	if err != nil {
 		return err
@@ -175,8 +221,8 @@ func (s *ActivitySvc) DeleteComment(ctx context.Context, id uuid.UUID, projectID
 	if a.ActivityType != taskdom.ActivityTypeComment {
 		return taskdom.ErrActivityNotAComment
 	}
-	// Resolve caller's user UUID to their member UUID for ownership comparison.
-	member, err := s.memberRepo.FindMemberByUserProject(ctx, actorID, projectID)
+	// Resolve caller's actor UUID to their member UUID for ownership comparison.
+	member, err := s.memberRepo.FindMemberByActor(ctx, projectID, actorID, agentID)
 	if err != nil {
 		return err
 	}
@@ -217,13 +263,18 @@ func activityPayload(a *taskdom.Activity, projectID uuid.UUID) map[string]any {
 
 // publishToActivityStream appends the activity to the dedicated task-activity
 // Valkey stream and also broadcasts a real-time pub/sub notification.
+// agentID, when non-nil, is embedded so the consumer can resolve the actor as
+// an agent member instead of a user member.
 // Errors are intentionally swallowed — a messaging failure must not block
 // the primary HTTP response.
-func (s *ActivitySvc) publishToActivityStream(ctx context.Context, a *taskdom.Activity, projectID uuid.UUID) {
+func (s *ActivitySvc) publishToActivityStream(ctx context.Context, a *taskdom.Activity, projectID uuid.UUID, agentID *uuid.UUID) {
 	if s.publisher == nil {
 		return
 	}
 	payload := activityPayload(a, projectID)
+	if agentID != nil {
+		payload["actor_agent_id"] = agentID.String()
+	}
 	_ = s.publisher.Append(ctx, events.StreamTaskActivities, string(a.ActivityType), payload)
 	_ = s.publisher.Publish(ctx, events.ChannelRealtime, map[string]any{
 		"type":    string(a.ActivityType),

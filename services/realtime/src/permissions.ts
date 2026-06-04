@@ -37,6 +37,9 @@ export function eventNamespace(type: string): EventNamespace | undefined {
 	// github.branch.* and github.pr.* events are delivered to the tasks room
 	// because they are task-scoped and require the same tasks.read permission.
 	if (type.startsWith("github.")) return "tasks";
+	// agent.* events are task-scoped (conversation started/finished/events) and
+	// require the same tasks.read permission.
+	if (type.startsWith("agent.")) return "tasks";
 	return undefined;
 }
 

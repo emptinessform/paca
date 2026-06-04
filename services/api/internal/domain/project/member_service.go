@@ -23,8 +23,17 @@ type MemberService interface {
 	AddMember(ctx context.Context, projectID uuid.UUID, in AddMemberInput) (*ProjectMember, error)
 	UpdateMemberRole(ctx context.Context, projectID, userID uuid.UUID, in UpdateMemberRoleInput) (*ProjectMember, error)
 	RemoveMember(ctx context.Context, projectID, userID uuid.UUID) error
+	// UpdateMemberRoleByMemberID changes the role of a member by their membership record ID.
+	UpdateMemberRoleByMemberID(ctx context.Context, projectID, memberID uuid.UUID, in UpdateMemberRoleInput) (*ProjectMember, error)
+	// RemoveMemberByMemberID removes a member by their membership record ID.
+	RemoveMemberByMemberID(ctx context.Context, projectID, memberID uuid.UUID) error
 	// GetMyProjectPermissions returns the effective permission map of the
-	// calling user's project role. Returns ErrMemberNotFound when the user is
-	// not a member of the project.
-	GetMyProjectPermissions(ctx context.Context, projectID, userID uuid.UUID) (map[string]any, error)
+	// calling user's project role. Returns ErrMemberNotFound when the user
+	// is not a member. Optionally accepts an agentID to look up agent
+	// permissions instead of user permissions.
+	GetMyProjectPermissions(ctx context.Context, projectID, userID uuid.UUID, agentID *uuid.UUID) (map[string]any, error)
+	// AddAgentMember inserts an agent as a project member with the given role.
+	AddAgentMember(ctx context.Context, memberID, projectID, agentID, roleID uuid.UUID) error
+	// RemoveAgentMember soft-deletes the agent's membership record.
+	RemoveAgentMember(ctx context.Context, projectID, agentID uuid.UUID) error
 }

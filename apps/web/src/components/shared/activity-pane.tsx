@@ -12,7 +12,7 @@ import {
 	Send,
 	Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
 	blocksToText,
 	CommentDisplay,
@@ -48,7 +48,7 @@ export interface ActivityPaneConfig<T extends ActivityEntry> {
 	addComment?: (blocks: unknown[]) => Promise<unknown>;
 	updateComment?: (commentId: string, blocks: unknown[]) => Promise<unknown>;
 	deleteComment?: (commentId: string) => Promise<void>;
-	describeActivity: (entry: T) => string;
+	describeActivity: (entry: T) => ReactNode;
 	getCommentBlocks: (content: T["content"]) => unknown[] | null;
 	sortAscending?: boolean;
 	nameMaps?: Record<string, Record<string, string>>;
@@ -278,7 +278,7 @@ function timeAgo(iso: string): string {
 
 interface ActivityItemInnerProps<T extends ActivityEntry> {
 	entry: T;
-	describeActivity: (entry: T) => string;
+	describeActivity: (entry: T) => ReactNode;
 	getCommentBlocks: (content: T["content"]) => unknown[] | null;
 	updateComment?: (commentId: string, blocks: unknown[]) => Promise<unknown>;
 	deleteComment?: (commentId: string) => Promise<void>;

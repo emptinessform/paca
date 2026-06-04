@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { Bot } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { ActivityPane } from "@/components/shared/activity-pane";
 import { textToBlocks } from "@/components/shared/comment-blocknote";
@@ -53,7 +55,7 @@ export function TaskActivityPane({
 	}, [membersData, sprintsData]);
 
 	const describeActivity = useCallback(
-		(entry: Activity): string => {
+		(entry: Activity) => {
 			const c = entry.content ?? {};
 			switch (entry.activity_type) {
 				case "task.created":
@@ -78,6 +80,28 @@ export function TaskActivityPane({
 					return `added attachment${(c as Record<string, unknown>).file_name ? `: ${(c as Record<string, unknown>).file_name}` : ""}`;
 				case "task.attachment.removed":
 					return `removed attachment${(c as Record<string, unknown>).file_name ? `: ${(c as Record<string, unknown>).file_name}` : ""}`;
+				case "agent.session.started": {
+					const convId = (c as Record<string, unknown>).conversation_id as
+						| string
+						| undefined;
+					return (
+						<span className="flex items-center gap-1.5 flex-wrap">
+							<span>started an AI session</span>
+							{convId && (
+								<Link
+									to="/projects/$projectId/conversations/$conversationId"
+									params={{ projectId, conversationId: convId }}
+									target="_blank"
+									rel="noreferrer"
+									className="inline-flex items-center gap-1 text-[11px] font-medium text-primary/80 hover:text-primary underline-offset-2 hover:underline transition-colors"
+								>
+									<Bot className="size-3" />
+									Watch session
+								</Link>
+							)}
+						</span>
+					);
+				}
 				default:
 					return (
 						((c as Record<string, unknown>)._description as
@@ -86,7 +110,7 @@ export function TaskActivityPane({
 					);
 			}
 		},
-		[nameMaps],
+		[nameMaps, projectId],
 	);
 
 	const queryKey = [

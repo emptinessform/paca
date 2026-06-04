@@ -8,7 +8,10 @@ import (
 	"os"
 	"time"
 
+	agentdom "github.com/Paca-AI/api/internal/domain/agent"
 	notificationdom "github.com/Paca-AI/api/internal/domain/notification"
+	projectdom "github.com/Paca-AI/api/internal/domain/project"
+	taskdom "github.com/Paca-AI/api/internal/domain/task"
 	"github.com/Paca-AI/api/internal/events"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -20,6 +23,22 @@ const (
 	notificationReadCount     = 50
 )
 
+// memberReader resolves project_members rows.
+type memberReader interface {
+	FindMemberByID(ctx context.Context, memberID uuid.UUID) (*projectdom.ProjectMember, error)
+	FindMemberByUserProject(ctx context.Context, userID, projectID uuid.UUID) (*projectdom.ProjectMember, error)
+}
+
+// agentTaskTrigger creates an agent conversation when a task is assigned to an agent member.
+type agentTaskTrigger interface {
+	TriggerTaskAssigned(ctx context.Context, projectID, agentID, taskID, triggeredByMemberID uuid.UUID) (*agentdom.AgentConversation, error)
+}
+
+// agentActivityRecorder posts system-generated task activities.
+type agentActivityRecorder interface {
+	RecordActivity(ctx context.Context, in taskdom.RecordActivityInput) error
+}
+
 // NotificationConsumer reads task-assignment events from StreamTaskAssignments
 // and creates in-app notifications via the notification service.
 //
@@ -29,6 +48,9 @@ const (
 type NotificationConsumer struct {
 	client          *redis.Client
 	notificationSvc notificationdom.Service
+	memberRepo      memberReader
+	agentSvc        agentTaskTrigger
+	activityRec     agentActivityRecorder
 	log             *slog.Logger
 	consumerName    string
 	stopCh          chan struct{}
@@ -36,7 +58,8 @@ type NotificationConsumer struct {
 }
 
 // NewNotificationConsumer creates a consumer that is ready to be started.
-func NewNotificationConsumer(client *redis.Client, notificationSvc notificationdom.Service, log *slog.Logger) *NotificationConsumer {
+// memberRepo and agentSvc may be nil; agent triggering is then skipped.
+func NewNotificationConsumer(client *redis.Client, notificationSvc notificationdom.Service, log *slog.Logger, memberRepo memberReader, agentSvc agentTaskTrigger) *NotificationConsumer {
 	hostname, err := os.Hostname()
 	if err != nil || hostname == "" {
 		hostname = uuid.New().String()
@@ -44,11 +67,21 @@ func NewNotificationConsumer(client *redis.Client, notificationSvc notificationd
 	return &NotificationConsumer{
 		client:          client,
 		notificationSvc: notificationSvc,
+		memberRepo:      memberRepo,
+		agentSvc:        agentSvc,
 		log:             log,
 		consumerName:    fmt.Sprintf("%s.%s", notificationConsumerGroup, hostname),
 		stopCh:          make(chan struct{}),
 		doneCh:          make(chan struct{}),
 	}
+}
+
+// WithActivityRecorder attaches an activity recorder so that an
+// "agent.session.started" activity is appended to the task's history
+// each time an agent conversation is triggered.
+func (c *NotificationConsumer) WithActivityRecorder(r agentActivityRecorder) *NotificationConsumer {
+	c.activityRec = r
+	return c
 }
 
 // Start creates the consumer group if needed and begins processing in a
@@ -177,6 +210,41 @@ func (c *NotificationConsumer) handle(msg redis.XMessage) {
 		c.log.Warn("notification consumer: invalid actor_user_id", "id", msg.ID)
 		c.ack(ctx, msg.ID)
 		return
+	}
+
+	// Determine whether the assignee is an agent member.
+	// Agent members have no user_id, so sending them a notification would
+	// violate the FK constraint on notifications.recipient_user_id. Instead,
+	// we publish a trigger to the AI agent and skip the human notification.
+	if c.memberRepo != nil && c.agentSvc != nil {
+		member, err := c.memberRepo.FindMemberByID(ctx, newAssigneeMemberID)
+		if err == nil && member.IsAgent() && member.AgentID != nil {
+			var actorMemberID uuid.UUID
+			if actorMember, err := c.memberRepo.FindMemberByUserProject(ctx, actorUserID, projectID); err == nil {
+				actorMemberID = actorMember.ID
+			}
+			conv, triggerErr := c.agentSvc.TriggerTaskAssigned(ctx, projectID, *member.AgentID, taskID, actorMemberID)
+			if triggerErr != nil {
+				c.log.Error("notification consumer: TriggerTaskAssigned failed", "id", msg.ID, "err", triggerErr)
+			} else if conv != nil && c.activityRec != nil {
+				content, _ := json.Marshal(map[string]any{
+					"conversation_id": conv.ID.String(),
+					"agent_id":        member.AgentID.String(),
+				})
+				agentID := *member.AgentID
+				if recErr := c.activityRec.RecordActivity(ctx, taskdom.RecordActivityInput{
+					TaskID:       taskID,
+					ProjectID:    projectID,
+					ActorAgentID: &agentID,
+					ActivityType: taskdom.ActivityTypeAgentSessionStarted,
+					Content:      content,
+				}); recErr != nil {
+					c.log.Warn("notification consumer: could not record agent session activity", "err", recErr)
+				}
+			}
+			c.ack(ctx, msg.ID)
+			return
+		}
 	}
 
 	if err := c.notificationSvc.NotifyAssigned(ctx, notificationdom.NotifyAssignedInput{

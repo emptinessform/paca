@@ -31,6 +31,10 @@ export interface ProjectMember {
 	username: string;
 	full_name: string;
 	role_name: string;
+	member_type?: string; // "human" | "agent"
+	agent_id?: string;
+	agent_name?: string;
+	agent_handle?: string;
 }
 
 export interface ProjectRole {
@@ -117,20 +121,20 @@ export async function addProjectMember(
 
 export async function updateProjectMemberRole(
 	projectId: string,
-	userId: string,
+	memberId: string,
 	payload: { project_role_id: string },
 ): Promise<ProjectMember> {
 	const { data } = await apiClient.instance.patch<
 		SuccessEnvelope<ProjectMember>
-	>(`/projects/${projectId}/members/${userId}`, payload);
+	>(`/projects/${projectId}/members/${memberId}`, payload);
 	return data.data;
 }
 
 export async function removeProjectMember(
 	projectId: string,
-	userId: string,
+	memberId: string,
 ): Promise<void> {
-	await apiClient.instance.delete(`/projects/${projectId}/members/${userId}`);
+	await apiClient.instance.delete(`/projects/${projectId}/members/${memberId}`);
 }
 
 export async function getMyProjectPermissions(

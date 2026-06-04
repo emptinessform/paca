@@ -6,6 +6,7 @@ dist-ssr
 *.tsbuildinfo
 .env
 .env.production
+.env.dev
 .nitro
 .tanstack
 .wrangler
@@ -34,3 +35,6 @@ playwright
 
 # Local plugin development artifacts
 plugins/local
+
+# Python artifacts
+__pycache__/

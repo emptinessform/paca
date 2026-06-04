@@ -34,6 +34,12 @@ const (
 
 	// ActivityTypeComment is a user-authored comment on the task.
 	ActivityTypeComment ActivityType = "comment"
+
+	// --- Agent session events -------------------------------------------------
+
+	// ActivityTypeAgentSessionStarted is recorded when an AI agent begins a
+	// conversation session triggered by a task assignment.
+	ActivityTypeAgentSessionStarted ActivityType = "agent.session.started"
 )
 
 // Activity is a single entry in a task's activity log.  It represents either
@@ -84,10 +90,10 @@ type ActivityService interface {
 	AddComment(ctx context.Context, in AddCommentInput) (*Activity, error)
 	// UpdateComment edits the content of an existing comment.
 	// Returns ErrActivityForbidden when actorID != comment's author.
-	UpdateComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, content json.RawMessage) (*Activity, error)
+	UpdateComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, agentID *uuid.UUID, content json.RawMessage) (*Activity, error)
 	// DeleteComment soft-deletes a comment.
 	// Returns ErrActivityForbidden when actorID != comment's author.
-	DeleteComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID) error
+	DeleteComment(ctx context.Context, id uuid.UUID, projectID uuid.UUID, actorID uuid.UUID, agentID *uuid.UUID) error
 }
 
 // ActivityRecorder is the minimal interface used to persist system-generated
@@ -101,7 +107,8 @@ type ActivityRecorder interface {
 type AddCommentInput struct {
 	TaskID    uuid.UUID
 	ProjectID uuid.UUID
-	ActorID   uuid.UUID // authenticated user UUID; resolved to member UUID by the service
+	ActorID   uuid.UUID  // authenticated user UUID; resolved to member UUID by the service
+	AgentID   *uuid.UUID // agent UUID set when the request comes from an agent
 	Content   json.RawMessage
 }
 
@@ -110,6 +117,7 @@ type RecordActivityInput struct {
 	TaskID       uuid.UUID
 	ProjectID    uuid.UUID  // needed by consumer to resolve ActorID (user) → member ID
 	ActorID      *uuid.UUID // nil is allowed for system events; contains the user UUID
+	ActorAgentID *uuid.UUID // agent UUID when the actor is an agent (takes priority over ActorID for resolution)
 	ActivityType ActivityType
 	Content      json.RawMessage
 }

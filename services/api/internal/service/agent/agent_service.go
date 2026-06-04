@@ -1,0 +1,699 @@
+// Package agentsvc implements the AI Agent application service.
+package agentsvc
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	agentdom "github.com/Paca-AI/api/internal/domain/agent"
+	plugindom "github.com/Paca-AI/api/internal/domain/plugin"
+	"github.com/Paca-AI/api/internal/events"
+	"github.com/Paca-AI/api/internal/platform/messaging"
+	"github.com/Paca-AI/api/internal/platform/secret"
+	"github.com/google/uuid"
+)
+
+// projectMemberWriter is the minimal interface this service needs to bust the
+// member list cache after an agent is added or removed.
+type projectMemberWriter interface {
+	InvalidateMembersCache(ctx context.Context, projectID uuid.UUID) error
+}
+
+// pluginFinder is the minimal interface to find VCS plugins.
+type pluginFinder interface {
+	FindByCapability(ctx context.Context, capability string) ([]*plugindom.Plugin, error)
+}
+
+// Service is the concrete AI Agent service.
+type Service struct {
+	repo       agentdom.Repository
+	projRepo   projectMemberWriter
+	publisher  *messaging.Publisher
+	pluginRepo pluginFinder
+	encryptor  *secret.Encryptor
+}
+
+// New returns a configured agent service.
+func New(repo agentdom.Repository, projRepo projectMemberWriter, publisher *messaging.Publisher, pluginRepo pluginFinder) *Service {
+	return &Service{repo: repo, projRepo: projRepo, publisher: publisher, pluginRepo: pluginRepo}
+}
+
+// WithEncryptor configures AES-256-GCM encryption for the LLM API key stored at rest.
+func (s *Service) WithEncryptor(enc *secret.Encryptor) *Service {
+	s.encryptor = enc
+	return s
+}
+
+// encryptKey encrypts plaintext if an encryptor is configured; otherwise returns plaintext unchanged.
+func (s *Service) encryptKey(plaintext string) (string, error) {
+	if s.encryptor == nil || plaintext == "" {
+		return plaintext, nil
+	}
+	return s.encryptor.Encrypt(plaintext)
+}
+
+// -------------------------------------------------------------------------
+// Agents
+// -------------------------------------------------------------------------
+
+// ListAgents returns all agents in the given project.
+func (s *Service) ListAgents(ctx context.Context, projectID uuid.UUID) ([]*agentdom.Agent, error) {
+	return s.repo.ListAgents(ctx, projectID)
+}
+
+// GetAgent returns a single agent after verifying project ownership.
+func (s *Service) GetAgent(ctx context.Context, projectID, agentID uuid.UUID) (*agentdom.Agent, error) {
+	a, err := s.repo.FindAgentByID(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	if a.ProjectID != projectID {
+		return nil, agentdom.ErrAgentNotFound
+	}
+	return a, nil
+}
+
+// CreateAgent validates input, creates the agent, and sets up project membership.
+func (s *Service) CreateAgent(ctx context.Context, projectID uuid.UUID, in agentdom.CreateAgentInput) (*agentdom.Agent, error) {
+	handle := strings.TrimSpace(in.Handle)
+	if handle == "" {
+		return nil, agentdom.ErrAgentHandleInvalid
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return nil, agentdom.ErrAgentNameInvalid
+	}
+
+	// Check handle uniqueness
+	if existing, err := s.repo.FindAgentByHandle(ctx, projectID, handle); err == nil && existing != nil {
+		return nil, agentdom.ErrAgentHandleTaken
+	}
+
+	encryptedKey, err := s.encryptKey(in.LLMAPIKey)
+	if err != nil {
+		return nil, fmt.Errorf("encrypt LLM API key: %w", err)
+	}
+
+	now := time.Now()
+	a := &agentdom.Agent{
+		ID:                uuid.New(),
+		ProjectID:         projectID,
+		Name:              name,
+		Handle:            handle,
+		LLMProvider:       in.LLMProvider,
+		LLMModel:          in.LLMModel,
+		LLMAPIKeySecret:   encryptedKey,
+		LLMBaseURL:        in.LLMBaseURL,
+		SystemPrompt:      in.SystemPrompt,
+		CanCloneRepos:     in.CanCloneRepos,
+		CanCreatePRs:      in.CanCreatePRs,
+		MaxIterations:     in.MaxIterations,
+		TimeoutMinutes:    in.TimeoutMinutes,
+		GitCommitterName:  in.GitCommitterName,
+		GitCommitterEmail: in.GitCommitterEmail,
+		CreatedBy:         in.CreatedBy,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}
+	const maxIterationsLimit = 200
+	const timeoutMinutesLimit = 480 // 8 hours
+
+	if a.MaxIterations <= 0 {
+		a.MaxIterations = 50
+	} else if a.MaxIterations > maxIterationsLimit {
+		a.MaxIterations = maxIterationsLimit
+	}
+	if a.TimeoutMinutes <= 0 {
+		a.TimeoutMinutes = 30
+	} else if a.TimeoutMinutes > timeoutMinutesLimit {
+		a.TimeoutMinutes = timeoutMinutesLimit
+	}
+	if a.GitCommitterName == "" {
+		a.GitCommitterName = "paca-agent"
+	}
+	if a.GitCommitterEmail == "" {
+		a.GitCommitterEmail = "280579135+paca-agent@users.noreply.github.com"
+	}
+
+	// Atomically create the agent and its project membership in one transaction.
+	memberID := uuid.New()
+	if err := s.repo.CreateAgentWithMembership(ctx, a, memberID, projectID, in.ProjectRoleID); err != nil {
+		return nil, fmt.Errorf("create agent with membership: %w", err)
+	}
+	a.MemberID = &memberID
+
+	// Best-effort cache invalidation so the new member appears immediately.
+	_ = s.projRepo.InvalidateMembersCache(ctx, projectID)
+
+	return a, nil
+}
+
+// UpdateAgent patches mutable fields of an existing agent.
+func (s *Service) UpdateAgent(ctx context.Context, projectID, agentID uuid.UUID, in agentdom.UpdateAgentInput) (*agentdom.Agent, error) {
+	a, err := s.GetAgent(ctx, projectID, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if in.Name != nil {
+		a.Name = strings.TrimSpace(*in.Name)
+	}
+	if in.Handle != nil {
+		h := strings.TrimSpace(*in.Handle)
+		if h != a.Handle {
+			if existing, err := s.repo.FindAgentByHandle(ctx, projectID, h); err == nil && existing != nil {
+				return nil, agentdom.ErrAgentHandleTaken
+			}
+			a.Handle = h
+		}
+	}
+	if in.LLMProvider != nil {
+		a.LLMProvider = *in.LLMProvider
+	}
+	if in.LLMModel != nil {
+		a.LLMModel = *in.LLMModel
+	}
+	if in.LLMAPIKey != nil {
+		encryptedKey, err := s.encryptKey(*in.LLMAPIKey)
+		if err != nil {
+			return nil, fmt.Errorf("encrypt LLM API key: %w", err)
+		}
+		a.LLMAPIKeySecret = encryptedKey
+	}
+	if in.LLMBaseURL != nil {
+		a.LLMBaseURL = in.LLMBaseURL
+	}
+	if in.SystemPrompt != nil {
+		a.SystemPrompt = *in.SystemPrompt
+	}
+	if in.CanCloneRepos != nil {
+		a.CanCloneRepos = *in.CanCloneRepos
+	}
+	if in.CanCreatePRs != nil {
+		a.CanCreatePRs = *in.CanCreatePRs
+	}
+	const maxIterationsLimit = 200
+	const timeoutMinutesLimit = 480
+
+	if in.MaxIterations != nil {
+		v := *in.MaxIterations
+		if v <= 0 {
+			v = 50
+		} else if v > maxIterationsLimit {
+			v = maxIterationsLimit
+		}
+		a.MaxIterations = v
+	}
+	if in.TimeoutMinutes != nil {
+		v := *in.TimeoutMinutes
+		if v <= 0 {
+			v = 30
+		} else if v > timeoutMinutesLimit {
+			v = timeoutMinutesLimit
+		}
+		a.TimeoutMinutes = v
+	}
+	if in.GitCommitterName != nil {
+		a.GitCommitterName = *in.GitCommitterName
+	}
+	if in.GitCommitterEmail != nil {
+		a.GitCommitterEmail = *in.GitCommitterEmail
+	}
+	a.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateAgent(ctx, a); err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+// DeleteAgent soft-deletes an agent and its membership.
+func (s *Service) DeleteAgent(ctx context.Context, projectID, agentID uuid.UUID) error {
+	a, err := s.GetAgent(ctx, projectID, agentID)
+	if err != nil {
+		return err
+	}
+	// Atomically soft-delete the agent and its project membership in one transaction.
+	if err := s.repo.SoftDeleteAgentWithMembership(ctx, projectID, a.ID); err != nil {
+		return err
+	}
+	// Best-effort cache invalidation so the deleted member disappears immediately.
+	_ = s.projRepo.InvalidateMembersCache(ctx, projectID)
+	return nil
+}
+
+// -------------------------------------------------------------------------
+// MCP Servers
+// -------------------------------------------------------------------------
+
+// ListMCPServers returns all MCP servers for the given agent.
+func (s *Service) ListMCPServers(ctx context.Context, agentID uuid.UUID) ([]*agentdom.AgentMCPServer, error) {
+	return s.repo.ListMCPServers(ctx, agentID)
+}
+
+// AddMCPServer creates a new MCP server for the given agent.
+func (s *Service) AddMCPServer(ctx context.Context, agentID uuid.UUID, in agentdom.AddMCPServerInput) (*agentdom.AgentMCPServer, error) {
+	if in.Transport == "stdio" && (in.Command == nil || *in.Command == "") {
+		return nil, agentdom.ErrMCPServerCommandRequired
+	}
+
+	now := time.Now()
+	srv := &agentdom.AgentMCPServer{
+		ID:         uuid.New(),
+		AgentID:    agentID,
+		ServerName: strings.TrimSpace(in.ServerName),
+		Transport:  in.Transport,
+		Command:    in.Command,
+		Args:       in.Args,
+		URL:        in.URL,
+		Env:        in.Env,
+		IsEnabled:  true,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	if srv.Args == nil {
+		srv.Args = []string{}
+	}
+	if srv.Env == nil {
+		srv.Env = map[string]string{}
+	}
+	if err := s.repo.CreateMCPServer(ctx, srv); err != nil {
+		return nil, err
+	}
+	return srv, nil
+}
+
+// UpdateMCPServer patches mutable fields of an existing MCP server.
+func (s *Service) UpdateMCPServer(ctx context.Context, agentID, serverID uuid.UUID, in agentdom.UpdateMCPServerInput) (*agentdom.AgentMCPServer, error) {
+	srv, err := s.repo.FindMCPServerByID(ctx, serverID)
+	if err != nil {
+		return nil, err
+	}
+	if srv.AgentID != agentID {
+		return nil, agentdom.ErrMCPServerNotFound
+	}
+	if in.Command != nil {
+		srv.Command = in.Command
+	}
+	if in.Args != nil {
+		srv.Args = in.Args
+	}
+	if in.URL != nil {
+		srv.URL = in.URL
+	}
+	if in.Env != nil {
+		srv.Env = in.Env
+	}
+	if in.IsEnabled != nil {
+		srv.IsEnabled = *in.IsEnabled
+	}
+	srv.UpdatedAt = time.Now()
+	if err := s.repo.UpdateMCPServer(ctx, srv); err != nil {
+		return nil, err
+	}
+	return srv, nil
+}
+
+// DeleteMCPServer removes an MCP server after verifying ownership.
+func (s *Service) DeleteMCPServer(ctx context.Context, agentID, serverID uuid.UUID) error {
+	srv, err := s.repo.FindMCPServerByID(ctx, serverID)
+	if err != nil {
+		return err
+	}
+	if srv.AgentID != agentID {
+		return agentdom.ErrMCPServerNotFound
+	}
+	return s.repo.DeleteMCPServer(ctx, serverID)
+}
+
+// -------------------------------------------------------------------------
+// Skills
+// -------------------------------------------------------------------------
+
+// ListSkills returns all skills for the given agent.
+func (s *Service) ListSkills(ctx context.Context, agentID uuid.UUID) ([]*agentdom.AgentSkill, error) {
+	return s.repo.ListSkills(ctx, agentID)
+}
+
+// AddSkill creates a new skill for the given agent.
+func (s *Service) AddSkill(ctx context.Context, agentID uuid.UUID, in agentdom.AddSkillInput) (*agentdom.AgentSkill, error) {
+	now := time.Now()
+	skill := &agentdom.AgentSkill{
+		ID:           uuid.New(),
+		AgentID:      agentID,
+		SkillName:    strings.TrimSpace(in.SkillName),
+		SkillSource:  in.SkillSource,
+		SkillContent: in.SkillContent,
+		SourceURL:    in.SourceURL,
+		Triggers:     in.Triggers,
+		IsEnabled:    true,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if skill.Triggers == nil {
+		skill.Triggers = []string{}
+	}
+	if err := s.repo.CreateSkill(ctx, skill); err != nil {
+		return nil, err
+	}
+	return skill, nil
+}
+
+// UpdateSkill patches mutable fields of an existing skill.
+func (s *Service) UpdateSkill(ctx context.Context, agentID, skillID uuid.UUID, in agentdom.UpdateSkillInput) (*agentdom.AgentSkill, error) {
+	skill, err := s.repo.FindSkillByID(ctx, skillID)
+	if err != nil {
+		return nil, err
+	}
+	if skill.AgentID != agentID {
+		return nil, agentdom.ErrSkillNotFound
+	}
+	if in.SkillContent != nil {
+		skill.SkillContent = *in.SkillContent
+	}
+	if in.Triggers != nil {
+		skill.Triggers = in.Triggers
+	}
+	if in.IsEnabled != nil {
+		skill.IsEnabled = *in.IsEnabled
+	}
+	skill.UpdatedAt = time.Now()
+	if err := s.repo.UpdateSkill(ctx, skill); err != nil {
+		return nil, err
+	}
+	return skill, nil
+}
+
+// DeleteSkill removes a skill after verifying ownership.
+func (s *Service) DeleteSkill(ctx context.Context, agentID, skillID uuid.UUID) error {
+	skill, err := s.repo.FindSkillByID(ctx, skillID)
+	if err != nil {
+		return err
+	}
+	if skill.AgentID != agentID {
+		return agentdom.ErrSkillNotFound
+	}
+	return s.repo.DeleteSkill(ctx, skillID)
+}
+
+// -------------------------------------------------------------------------
+// Conversations
+// -------------------------------------------------------------------------
+
+// ListConversations returns a paginated list of conversations matching the filter.
+func (s *Service) ListConversations(ctx context.Context, in agentdom.ListConversationsFilter) ([]*agentdom.AgentConversation, int64, error) {
+	return s.repo.ListConversations(ctx, in)
+}
+
+// GetConversation returns a single conversation after verifying project ownership.
+func (s *Service) GetConversation(ctx context.Context, projectID, conversationID uuid.UUID) (*agentdom.AgentConversation, error) {
+	c, err := s.repo.FindConversationByID(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	if c.ProjectID != projectID {
+		return nil, agentdom.ErrConversationNotFound
+	}
+	return c, nil
+}
+
+// ListConversationEvents returns a paginated list of events for a conversation.
+func (s *Service) ListConversationEvents(ctx context.Context, conversationID uuid.UUID, offset, limit int) ([]*agentdom.AgentConversationEvent, int64, error) {
+	return s.repo.ListConversationEvents(ctx, conversationID, offset, limit)
+}
+
+// StopConversation stops a conversation that is not already finished.
+func (s *Service) StopConversation(ctx context.Context, projectID, conversationID uuid.UUID) error {
+	c, err := s.GetConversation(ctx, projectID, conversationID)
+	if err != nil {
+		return err
+	}
+	if c.Status == "finished" || c.Status == "stopped" || c.Status == "failed" {
+		return agentdom.ErrConversationAlreadyStopped
+	}
+	if err := s.repo.UpdateConversationStatus(ctx, conversationID, "stopped"); err != nil {
+		return err
+	}
+	return s.publishTrigger(ctx, events.TopicAgentStop, map[string]any{
+		"conversation_id": conversationID.String(),
+		"project_id":      projectID.String(),
+	})
+}
+
+// SendConversationMessage publishes a chat message to an active conversation.
+func (s *Service) SendConversationMessage(ctx context.Context, projectID, conversationID uuid.UUID, message string, memberID uuid.UUID) error {
+	c, err := s.GetConversation(ctx, projectID, conversationID)
+	if err != nil {
+		return err
+	}
+	if c.Status != "running" {
+		return agentdom.ErrConversationNotRunning
+	}
+	return s.publishTrigger(ctx, events.TopicAgentChatMessage, map[string]any{
+		"conversation_id": conversationID.String(),
+		"project_id":      projectID.String(),
+		"message":         message,
+		"member_id":       memberID.String(),
+	})
+}
+
+// -------------------------------------------------------------------------
+// Chat Sessions
+// -------------------------------------------------------------------------
+
+// ListChatSessions returns all chat sessions for the given agent and member.
+func (s *Service) ListChatSessions(ctx context.Context, _, agentID, memberID uuid.UUID) ([]*agentdom.AgentChatSession, error) {
+	return s.repo.ListChatSessions(ctx, agentID, memberID)
+}
+
+// StartChatSession creates a new chat session and publishes the initial message trigger.
+func (s *Service) StartChatSession(ctx context.Context, projectID, agentID, memberID uuid.UUID, message string) (*agentdom.AgentChatSession, *agentdom.AgentConversation, error) {
+	now := time.Now()
+
+	session := &agentdom.AgentChatSession{
+		ID:            uuid.New(),
+		AgentID:       agentID,
+		ProjectID:     projectID,
+		MemberID:      memberID,
+		LastMessageAt: &now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.repo.CreateChatSession(ctx, session); err != nil {
+		return nil, nil, err
+	}
+
+	conv, err := s.createConversation(ctx, projectID, agentID, memberID, agentdom.AgentConversation{
+		TriggerType:   "chat_message",
+		ChatSessionID: &session.ID,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := s.publishChatTrigger(ctx, agentID, conv.ID, session.ID, projectID, memberID, message, s.gatherRepoPluginIDs(ctx)); err != nil {
+		return nil, nil, err
+	}
+
+	return session, conv, nil
+}
+
+// SendChatMessage sends a message to an existing chat session and publishes the trigger.
+func (s *Service) SendChatMessage(ctx context.Context, projectID, sessionID, memberID uuid.UUID, message string) (*agentdom.AgentConversation, error) {
+	session, err := s.repo.FindChatSessionByID(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session.ProjectID != projectID {
+		return nil, agentdom.ErrChatSessionNotFound
+	}
+
+	conv, err := s.createConversation(ctx, projectID, session.AgentID, memberID, agentdom.AgentConversation{
+		TriggerType:   "chat_message",
+		ChatSessionID: &sessionID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.publishChatTrigger(ctx, session.AgentID, conv.ID, sessionID, projectID, memberID, message, s.gatherRepoPluginIDs(ctx)); err != nil {
+		return nil, err
+	}
+
+	// Update last_message_at
+	now := time.Now()
+	session.LastMessageAt = &now
+	_ = s.repo.UpdateChatSession(ctx, session)
+
+	return conv, nil
+}
+
+// ListChatMessages returns conversation events for a chat session.
+func (s *Service) ListChatMessages(ctx context.Context, sessionID uuid.UUID, offset, limit int) ([]*agentdom.AgentConversationEvent, int64, error) {
+	// TODO: We'd need to aggregate events from all conversations in this session.
+	// For now, return events from the most recent conversation with this session_id.
+	filter := agentdom.ListConversationsFilter{
+		Limit:  1,
+		Offset: 0,
+	}
+	_ = sessionID
+	convs, _, err := s.repo.ListConversations(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(convs) == 0 {
+		return []*agentdom.AgentConversationEvent{}, 0, nil
+	}
+	return s.repo.ListConversationEvents(ctx, convs[0].ID, offset, limit)
+}
+
+// -------------------------------------------------------------------------
+// Internal helpers
+// -------------------------------------------------------------------------
+
+func (s *Service) createConversation(ctx context.Context, projectID, agentID, memberID uuid.UUID, template agentdom.AgentConversation) (*agentdom.AgentConversation, error) {
+	now := time.Now()
+	conv := &agentdom.AgentConversation{
+		ID:                  uuid.New(),
+		AgentID:             agentID,
+		ProjectID:           projectID,
+		TriggerType:         template.TriggerType,
+		TaskID:              template.TaskID,
+		CommentID:           template.CommentID,
+		ChatSessionID:       template.ChatSessionID,
+		TriggeredByMemberID: memberID,
+		Status:              "queued",
+		CreatedAt:           now,
+		UpdatedAt:           now,
+	}
+	if err := s.repo.CreateConversation(ctx, conv); err != nil {
+		return nil, err
+	}
+	return conv, nil
+}
+
+// gatherRepoPlugins returns all installed plugins with the "repository" capability.
+func (s *Service) gatherRepoPlugins(ctx context.Context) []*plugindom.Plugin {
+	if s.pluginRepo == nil {
+		return nil
+	}
+	plugins, err := s.pluginRepo.FindByCapability(ctx, "repository")
+	if err != nil {
+		return nil
+	}
+	return plugins
+}
+
+// gatherRepoPluginIDs returns the string Names (e.g. "com.paca.github") of all
+// installed plugins with the "repository" capability. These are the identifiers
+// used in plugin API paths and published to the agent trigger stream.
+func (s *Service) gatherRepoPluginIDs(ctx context.Context) []string {
+	names := []string{}
+	for _, p := range s.gatherRepoPlugins(ctx) {
+		names = append(names, p.Name)
+	}
+	return names
+}
+
+// TriggerTaskAssigned creates a conversation and publishes the trigger event
+// when a task is assigned to an agent member.
+func (s *Service) TriggerTaskAssigned(ctx context.Context, projectID, agentID, taskID, triggeredByMemberID uuid.UUID) (*agentdom.AgentConversation, error) {
+	repoPlugins := s.gatherRepoPlugins(ctx)
+	repoPluginIDs := make([]string, 0, len(repoPlugins))
+	for _, p := range repoPlugins {
+		repoPluginIDs = append(repoPluginIDs, p.Name)
+	}
+
+	var repoPluginID *uuid.UUID
+	if len(repoPlugins) > 0 {
+		id := repoPlugins[0].ID
+		repoPluginID = &id
+	}
+
+	conv, err := s.createConversation(ctx, projectID, agentID, triggeredByMemberID, agentdom.AgentConversation{
+		TriggerType:  "task_assigned",
+		TaskID:       &taskID,
+		RepoPluginID: repoPluginID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{
+		"conversation_id": conv.ID.String(),
+		"project_id":      projectID.String(),
+		"agent_id":        agentID.String(),
+		"task_id":         taskID.String(),
+		"actor_member_id": triggeredByMemberID.String(),
+		"trigger_type":    "task_assigned",
+		"repo_plugin_ids": strings.Join(repoPluginIDs, ","),
+	}
+	_ = s.publishTrigger(ctx, events.TopicAgentTaskAssigned, payload)
+	return conv, nil
+}
+
+// TriggerCommentMention creates a conversation and publishes a comment-mention trigger.
+// message is the plain-text content of the comment so the agent's initial prompt
+// is populated without requiring a separate MCP call.
+func (s *Service) TriggerCommentMention(ctx context.Context, projectID, agentID, taskID, commentID, triggeredByMemberID uuid.UUID, message string) (*agentdom.AgentConversation, error) {
+	repoPlugins := s.gatherRepoPlugins(ctx)
+	repoPluginIDs := make([]string, 0, len(repoPlugins))
+	for _, p := range repoPlugins {
+		repoPluginIDs = append(repoPluginIDs, p.Name)
+	}
+
+	var repoPluginID *uuid.UUID
+	if len(repoPlugins) > 0 {
+		id := repoPlugins[0].ID
+		repoPluginID = &id
+	}
+
+	conv, err := s.createConversation(ctx, projectID, agentID, triggeredByMemberID, agentdom.AgentConversation{
+		TriggerType:  "comment_mention",
+		TaskID:       &taskID,
+		CommentID:    &commentID,
+		RepoPluginID: repoPluginID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{
+		"conversation_id": conv.ID.String(),
+		"project_id":      projectID.String(),
+		"agent_id":        agentID.String(),
+		"task_id":         taskID.String(),
+		"comment_id":      commentID.String(),
+		"actor_member_id": triggeredByMemberID.String(),
+		"trigger_type":    "comment_mention",
+		"message":         message,
+		"repo_plugin_ids": strings.Join(repoPluginIDs, ","),
+	}
+	_ = s.publishTrigger(ctx, events.TopicAgentCommentMention, payload)
+	return conv, nil
+}
+
+func (s *Service) publishTrigger(ctx context.Context, topic string, payload map[string]any) error {
+	if s.publisher == nil {
+		return nil
+	}
+	// Write flat fields so services/ai-agent can read them without JSON decoding.
+	// The trigger_type is embedded in the payload; the stream entry type field
+	// mirrors it for routing convenience.
+	payload["type"] = topic
+	return s.publisher.AppendFlat(ctx, events.StreamAgentTriggers, payload)
+}
+
+func (s *Service) publishChatTrigger(ctx context.Context, agentID, convID, sessionID, projectID, memberID uuid.UUID, message string, repoPluginIDs []string) error {
+	payload := map[string]any{
+		"conversation_id": convID.String(),
+		"project_id":      projectID.String(),
+		"agent_id":        agentID.String(),
+		"chat_session_id": sessionID.String(),
+		"actor_member_id": memberID.String(),
+		"trigger_type":    "chat_message",
+		"message":         message,
+		"repo_plugin_ids": strings.Join(repoPluginIDs, ","),
+	}
+	return s.publishTrigger(ctx, events.TopicAgentChatMessage, payload)
+}

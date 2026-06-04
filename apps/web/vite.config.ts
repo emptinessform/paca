@@ -39,6 +39,9 @@ export default defineConfig({
 	server: {
 		watch: isDocker ? { usePolling: true } : undefined,
 		hmr: isDocker ? { clientPort: 3000 } : undefined,
+		allowedHosts: process.env.VITE_ALLOWED_HOST
+			? [process.env.VITE_ALLOWED_HOST]
+			: [],
 	},
 	test: {
 		environment: "jsdom",
