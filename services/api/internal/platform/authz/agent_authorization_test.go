@@ -14,7 +14,7 @@ type mockAgentRoleResolver struct {
 	roles map[uuid.UUID]map[uuid.UUID]string // project_id -> agent_id -> role_name
 }
 
-func (m *mockAgentRoleResolver) GetAgentProjectRoleName(ctx context.Context, agentID, projectID uuid.UUID) (string, error) {
+func (m *mockAgentRoleResolver) GetAgentProjectRoleName(_ context.Context, agentID, projectID uuid.UUID) (string, error) {
 	if projectMap, ok := m.roles[projectID]; ok {
 		if role, ok := projectMap[agentID]; ok {
 			return role, nil
@@ -30,18 +30,18 @@ type mockPermissionStore struct {
 	legacyPerms  map[string][]authz.Permission
 }
 
-func (m *mockPermissionStore) ListGlobalPermissions(ctx context.Context, userID uuid.UUID) ([]authz.Permission, error) {
+func (m *mockPermissionStore) ListGlobalPermissions(_ context.Context, userID uuid.UUID) ([]authz.Permission, error) {
 	return m.globalPerms[userID], nil
 }
 
-func (m *mockPermissionStore) ListProjectPermissions(ctx context.Context, userID, projectID uuid.UUID) ([]authz.Permission, error) {
+func (m *mockPermissionStore) ListProjectPermissions(_ context.Context, userID, projectID uuid.UUID) ([]authz.Permission, error) {
 	if projMap, ok := m.projectPerms[projectID]; ok {
 		return projMap[userID], nil
 	}
 	return nil, nil
 }
 
-func (m *mockPermissionStore) ListAgentProjectPermissions(ctx context.Context, agentID, projectID uuid.UUID) ([]authz.Permission, error) {
+func (m *mockPermissionStore) ListAgentProjectPermissions(_ context.Context, agentID, projectID uuid.UUID) ([]authz.Permission, error) {
 	if projMap, ok := m.agentPerms[projectID]; ok {
 		return projMap[agentID], nil
 	}

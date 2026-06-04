@@ -135,12 +135,12 @@ func (s *Service) UpdateMemberRoleByMemberID(ctx context.Context, projectID, mem
 	if _, err := s.repo.FindByID(ctx, projectID); err != nil {
 		return nil, err
 	}
-	
+
 	member, err := s.repo.FindMemberByID(ctx, memberID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if member.ProjectID != projectID {
 		return nil, projectdom.ErrMemberNotFound
 	}
@@ -166,15 +166,15 @@ func (s *Service) RemoveMemberByMemberID(ctx context.Context, projectID, memberI
 	if _, err := s.repo.FindByID(ctx, projectID); err != nil {
 		return err
 	}
-	
+
 	member, err := s.repo.FindMemberByID(ctx, memberID)
 	if err != nil {
 		return err
 	}
-	
+
 	if member.ProjectID != projectID {
 		return projectdom.ErrMemberNotFound
 	}
-	
+
 	return s.repo.RemoveMemberByMemberID(ctx, memberID)
 }

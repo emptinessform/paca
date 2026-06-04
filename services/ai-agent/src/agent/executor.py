@@ -10,6 +10,7 @@ import uuid
 
 import httpx
 from openhands.sdk import Agent, AgentContext, Conversation
+from openhands.sdk.conversation.visualizer import ConversationVisualizerBase
 from openhands.tools import get_default_tools
 
 from ..config import settings
@@ -23,6 +24,22 @@ from .prompt import build_initial_prompt
 from .repo_tools import make_repository_tool_specs
 
 logger = logging.getLogger(__name__)
+
+
+# ─── Custom visualizer ────────────────────────────────────────────────────────
+
+
+class _QuietVisualizer(ConversationVisualizerBase):
+    """No-op visualizer that silently accepts all event types.
+
+    The SDK's DefaultConversationVisualizer emits a WARNING for every event
+    type absent from its EVENT_VISUALIZATION_CONFIG (e.g. StreamingDeltaEvent).
+    Since this service handles all events via callbacks / token_callbacks, we
+    replace the default visualizer with this no-op to eliminate the noise.
+    """
+
+    def on_event(self, event) -> None:  # noqa: ANN001
+        pass  # all event processing is done in the conversation callbacks
 
 
 # ─── Repository info helper ───────────────────────────────────────────────────
@@ -257,6 +274,21 @@ async def run_conversation(trigger: TriggerMessage, agent_config: AgentConfig) -
         mcp_config = build_mcp_config(agent_config.mcp_servers, agent_config.agent_id, trigger.project_id)
 
         system_suffix = agent_config.system_prompt or ""
+
+        # Documentation workflow — always read project docs first, always write to Paca.
+        system_suffix += (
+            "\n\n## IMPORTANT: Documentation Workflow\n"
+            f"This project's documentation is managed in Paca (project ID: `{trigger.project_id}`).\n\n"
+            "**Before starting any task**, read the project documentation:\n"
+            f"1. Call `list_docs` with `projectId='{trigger.project_id}'` to see the full documentation tree.\n"
+            "2. Call `read_doc` on relevant documents to understand the project context before proceeding.\n\n"
+            "**When writing documentation**, always use the Paca MCP tools — never create local markdown files:\n"
+            "- Call `list_docs` to check whether a document already exists at the intended path.\n"
+            "- If it exists: `write_doc` will update it automatically.\n"
+            "- If it does not exist: `write_doc` will create it and any missing folders automatically.\n"
+            "- Use paths like `'Architecture/API Design'` — folder structure is handled for you.\n"
+        )
+
         has_repos = len(trigger.repo_plugin_ids) > 0 and agent_config.can_clone_repos
         logger.info(
             "Conversation %s — repo_plugin_ids=%s can_clone_repos=%s has_repos=%s",
@@ -314,6 +346,7 @@ async def run_conversation(trigger: TriggerMessage, agent_config: AgentConfig) -
                     callbacks=[_make_event_callback(trigger, loop, counter)],
                     token_callbacks=[_make_token_callback(trigger, loop, counter)],
                     max_iteration_per_run=agent_config.max_iterations,
+                    visualizer=_QuietVisualizer,
                 )
 
                 all_repos_info = None

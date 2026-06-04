@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	agentdom "github.com/Paca-AI/api/internal/domain/agent"
 	notificationdom "github.com/Paca-AI/api/internal/domain/notification"
 	projectdom "github.com/Paca-AI/api/internal/domain/project"
 	taskdom "github.com/Paca-AI/api/internal/domain/task"
@@ -19,6 +20,13 @@ import (
 // to a project member UUID.
 type memberLookup interface {
 	FindMemberByActor(ctx context.Context, projectID, actorID uuid.UUID, agentID *uuid.UUID) (*projectdom.ProjectMember, error)
+	FindMemberByAgent(ctx context.Context, projectID, agentID uuid.UUID) (*projectdom.ProjectMember, error)
+}
+
+// agentCommentTrigger creates an agent conversation when an agent is @-mentioned
+// in a task comment.
+type agentCommentTrigger interface {
+	TriggerCommentMention(ctx context.Context, projectID, agentID, taskID, commentID, triggeredByMemberID uuid.UUID, message string) (*agentdom.AgentConversation, error)
 }
 
 // ActivitySvc implements taskdom.ActivityService (which includes
@@ -28,6 +36,7 @@ type ActivitySvc struct {
 	memberRepo      memberLookup
 	publisher       *messaging.Publisher
 	notificationSvc notificationdom.Service
+	agentTrigger    agentCommentTrigger
 }
 
 // NewActivityService creates a new ActivitySvc backed by repo.
@@ -42,6 +51,13 @@ func NewActivityService(repo taskdom.ActivityRepository, memberRepo memberLookup
 // @mention notifications when comments are created.
 func (s *ActivitySvc) WithNotificationService(svc notificationdom.Service) *ActivitySvc {
 	s.notificationSvc = svc
+	return s
+}
+
+// WithAgentTrigger attaches an agent trigger used to start a conversation when
+// an agent is @-mentioned in a task comment.
+func (s *ActivitySvc) WithAgentTrigger(trigger agentCommentTrigger) *ActivitySvc {
+	s.agentTrigger = trigger
 	return s
 }
 
@@ -101,36 +117,66 @@ func (s *ActivitySvc) AddComment(ctx context.Context, in taskdom.AddCommentInput
 	}
 	s.publishRealtimeOnly(ctx, events.TopicTaskCommentAdded, activityPayload(a, in.ProjectID))
 
-	if s.notificationSvc != nil {
+	if s.notificationSvc != nil || s.agentTrigger != nil {
 		// Extract mentions from BlockNote JSON and notify mentioned users.
 		// Fall back to plain-text parsing when no structured mentions exist,
 		// to preserve compatibility with manually typed @mentions and legacy clients.
 		commentText := extractTextFromBlocks(in.Content)
 		teamMentions := mentionpkg.ExtractTeamMentionsFromBlocks(in.Content)
 		if len(teamMentions) == 0 {
-			_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
-				TaskID:          in.TaskID,
-				ProjectID:       in.ProjectID,
-				CommentText:     commentText,
-				ActorMemberID:   member.ID,
-				ActorUserID:     in.ActorID,
-				MentionedUserID: nil,
-			})
-		} else {
-			for _, m := range teamMentions {
-				mentionedUserID, err := uuid.Parse(m.ID)
-				if err != nil {
-					continue // invalid UUID, skip
-				}
-
+			if s.notificationSvc != nil {
 				_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
 					TaskID:          in.TaskID,
 					ProjectID:       in.ProjectID,
 					CommentText:     commentText,
 					ActorMemberID:   member.ID,
 					ActorUserID:     in.ActorID,
-					MentionedUserID: &mentionedUserID,
+					MentionedUserID: nil,
 				})
+			}
+		} else {
+			for _, m := range teamMentions {
+				mentionedID, err := uuid.Parse(m.ID)
+				if err != nil {
+					continue // invalid UUID, skip
+				}
+
+				// For agent members the web UI embeds agent_id (not user_id) as
+				// the mention id. Try to resolve it as an agent member first; if
+				// found, trigger a conversation instead of a human notification.
+				if s.agentTrigger != nil {
+					agentMember, agentErr := s.memberRepo.FindMemberByAgent(ctx, in.ProjectID, mentionedID)
+					if agentErr == nil && agentMember.IsAgent() && agentMember.AgentID != nil {
+						conv, _ := s.agentTrigger.TriggerCommentMention(ctx, in.ProjectID, *agentMember.AgentID, in.TaskID, a.ID, member.ID, commentText)
+						if conv != nil {
+							content, _ := json.Marshal(map[string]any{
+								"conversation_id": conv.ID.String(),
+								"agent_id":        agentMember.AgentID.String(),
+							})
+							agentID := *agentMember.AgentID
+							_ = s.RecordActivity(ctx, taskdom.RecordActivityInput{
+								TaskID:       in.TaskID,
+								ProjectID:    in.ProjectID,
+								ActorAgentID: &agentID,
+								ActivityType: taskdom.ActivityTypeAgentSessionStarted,
+								Content:      content,
+							})
+						}
+						continue
+					}
+				}
+
+				// Human user mention — send an in-app notification.
+				if s.notificationSvc != nil {
+					_ = s.notificationSvc.NotifyMentioned(ctx, notificationdom.NotifyMentionedInput{
+						TaskID:          in.TaskID,
+						ProjectID:       in.ProjectID,
+						CommentText:     commentText,
+						ActorMemberID:   member.ID,
+						ActorUserID:     in.ActorID,
+						MentionedUserID: &mentionedID,
+					})
+				}
 			}
 		}
 	}

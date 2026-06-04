@@ -141,7 +141,8 @@ func New(cfg *config.Config) (*App, error) {
 	agentRepo := pgRepo.NewAgentRepository(db)
 	agentService := agentsvc.New(agentRepo, projectService, publisher, pluginRepo)
 	activityService := tasksvc.NewActivityService(activityRepo, projectRepo, publisher).
-		WithNotificationService(notificationService)
+		WithNotificationService(notificationService).
+		WithAgentTrigger(agentService)
 	notificationConsumer := worker.NewNotificationConsumer(redisClient, notificationService, log, projectRepo, agentService).
 		WithActivityRecorder(activityService)
 	activityConsumer := worker.NewActivityConsumer(redisClient, activityRepo, projectRepo, log)

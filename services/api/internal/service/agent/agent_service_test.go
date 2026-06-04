@@ -267,7 +267,7 @@ func (m *mockProjectRepo) InvalidateMembersCache(_ context.Context, _ uuid.UUID)
 var _ projectMemberWriter = (*mockProjectRepo)(nil)
 
 type mockPluginRepo struct {
-	findByName    func(ctx context.Context, name string) (*plugindom.Plugin, error)
+	findByName       func(ctx context.Context, name string) (*plugindom.Plugin, error)
 	findByCapability func(ctx context.Context, capability string) ([]*plugindom.Plugin, error)
 }
 
@@ -1072,7 +1072,7 @@ func TestTriggerCommentMention_Success(t *testing.T) {
 	pluginRepo := &mockPluginRepo{}
 	svc := New(repo, projRepo, nil, pluginRepo)
 
-	result, err := svc.TriggerCommentMention(context.Background(), projectID, agentID, taskID, commentID, memberID)
+	result, err := svc.TriggerCommentMention(context.Background(), projectID, agentID, taskID, commentID, memberID, "test comment")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)

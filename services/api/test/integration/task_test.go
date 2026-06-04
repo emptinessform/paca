@@ -528,6 +528,10 @@ func (r *fakeActivityMemberRepo) FindMemberByActor(_ context.Context, _, actorID
 	return &projectdom.ProjectMember{ID: actorID}, nil
 }
 
+func (r *fakeActivityMemberRepo) FindMemberByAgent(_ context.Context, _, _ uuid.UUID) (*projectdom.ProjectMember, error) {
+	return nil, projectdom.ErrMemberNotFound
+}
+
 // ---------------------------------------------------------------------------
 // Router builder and token helper
 // ---------------------------------------------------------------------------

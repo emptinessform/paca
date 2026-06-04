@@ -36,12 +36,12 @@ export const TOOL_PERMISSIONS: ToolPermission[] = [
 	{ toolName: "delete_sprint", permissionKey: "sprints.write", requiresProject: true },
 	{ toolName: "complete_sprint", permissionKey: "sprints.write", requiresProject: true },
 
-	// Document tools
-	{ toolName: "list_documents", permissionKey: "docs.read", requiresProject: true },
-	{ toolName: "get_document", permissionKey: "docs.read", requiresProject: true },
-	{ toolName: "create_document", permissionKey: "docs.write", requiresProject: true },
-	{ toolName: "update_document", permissionKey: "docs.write", requiresProject: true },
-	{ toolName: "delete_document", permissionKey: "docs.write", requiresProject: true },
+	// Filesystem document tools
+	{ toolName: "list_docs", permissionKey: "docs.read", requiresProject: true },
+	{ toolName: "read_doc", permissionKey: "docs.read", requiresProject: true },
+	{ toolName: "write_doc", permissionKey: "docs.write", requiresProject: true },
+	{ toolName: "delete_doc", permissionKey: "docs.write", requiresProject: true },
+	{ toolName: "move_doc", permissionKey: "docs.write", requiresProject: true },
 
 	// Project member tools
 	{ toolName: "list_project_members", permissionKey: "project.members.read", requiresProject: true },
@@ -92,14 +92,6 @@ export const TOOL_PERMISSIONS: ToolPermission[] = [
 	{ toolName: "list_task_attachments", permissionKey: "tasks.read", requiresProject: true },
 	{ toolName: "get_attachment_download_url", permissionKey: "tasks.read", requiresProject: true },
 	{ toolName: "delete_task_attachment", permissionKey: "tasks.write", requiresProject: true },
-
-	// Document folder and snapshot tools
-	{ toolName: "list_doc_folders", permissionKey: "docs.read", requiresProject: true },
-	{ toolName: "create_doc_folder", permissionKey: "docs.write", requiresProject: true },
-	{ toolName: "update_doc_folder", permissionKey: "docs.write", requiresProject: true },
-	{ toolName: "delete_doc_folder", permissionKey: "docs.write", requiresProject: true },
-	{ toolName: "list_doc_snapshots", permissionKey: "docs.read", requiresProject: true },
-	{ toolName: "get_doc_snapshot", permissionKey: "docs.read", requiresProject: true },
 
 	// Task activity and comment tools
 	{ toolName: "list_task_activities", permissionKey: "tasks.read", requiresProject: true },

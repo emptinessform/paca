@@ -400,7 +400,7 @@ type projectPermStore struct {
 	projectPerms map[uuid.UUID][]authz.Permission
 	userPerms    map[uuid.UUID]map[uuid.UUID][]authz.Permission // user_id -> project_id -> permissions
 	agentPerms   map[uuid.UUID]map[uuid.UUID][]authz.Permission // project_id -> agent_id -> permissions
-	agentRoles   map[uuid.UUID]map[uuid.UUID]string            // project_id -> agent_id -> role_name
+	agentRoles   map[uuid.UUID]map[uuid.UUID]string             // project_id -> agent_id -> role_name
 }
 
 func (s *projectPermStore) ListGlobalPermissions(context.Context, uuid.UUID) ([]authz.Permission, error) {

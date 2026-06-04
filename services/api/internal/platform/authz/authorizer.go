@@ -21,7 +21,7 @@ type AgentRoleResolver interface {
 
 // Authorizer checks required permissions for a user or agent.
 type Authorizer struct {
-	store            PermissionStore
+	store             PermissionStore
 	agentRoleResolver AgentRoleResolver
 }
 

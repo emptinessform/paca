@@ -162,15 +162,15 @@ func (m *mockProjectSvc) GetMyProjectPermissions(ctx context.Context, projectID,
 
 func (m *mockProjectSvc) AddAgentMember(_ context.Context, _, _, _, _ uuid.UUID) error { return nil }
 func (m *mockProjectSvc) RemoveAgentMember(_ context.Context, _, _ uuid.UUID) error    { return nil }
-func (m *mockProjectSvc) UpdateMemberRoleByMemberID(_ context.Context, _, _ uuid.UUID, in projectdom.UpdateMemberRoleInput) (*projectdom.ProjectMember, error) {
+func (m *mockProjectSvc) UpdateMemberRoleByMemberID(_ context.Context, projectID, memberID uuid.UUID, in projectdom.UpdateMemberRoleInput) (*projectdom.ProjectMember, error) {
 	if m.updateMemberByMemberID != nil {
-		return m.updateMemberByMemberID(context.Background(), uuid.New(), uuid.New(), in)
+		return m.updateMemberByMemberID(context.Background(), projectID, memberID, in)
 	}
 	return nil, projectdom.ErrNotFound
 }
-func (m *mockProjectSvc) RemoveMemberByMemberID(_ context.Context, _, _ uuid.UUID) error {
+func (m *mockProjectSvc) RemoveMemberByMemberID(_ context.Context, projectID, memberID uuid.UUID) error {
 	if m.removeMemberByMemberID != nil {
-		return m.removeMemberByMemberID(context.Background(), uuid.New(), uuid.New())
+		return m.removeMemberByMemberID(context.Background(), projectID, memberID)
 	}
 	return projectdom.ErrNotFound
 }

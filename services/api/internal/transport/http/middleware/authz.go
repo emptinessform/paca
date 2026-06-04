@@ -81,8 +81,8 @@ func EnforcePermissions(c *gin.Context, authorizer *authz.Authorizer, scope Scop
 		}
 		allowed, err = authorizer.HasPermissionsForAgent(c.Request.Context(), agentUUID, *projectID, permissions...)
 	} else {
-		userID, err := uuid.Parse(claims.Subject)
-		if err != nil {
+		userID, parseErr := uuid.Parse(claims.Subject)
+		if parseErr != nil {
 			presenter.Error(c, apierr.New(apierr.CodeBadRequest, "invalid subject claim"))
 			return false
 		}

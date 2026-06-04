@@ -619,7 +619,9 @@ func (s *Service) TriggerTaskAssigned(ctx context.Context, projectID, agentID, t
 }
 
 // TriggerCommentMention creates a conversation and publishes a comment-mention trigger.
-func (s *Service) TriggerCommentMention(ctx context.Context, projectID, agentID, taskID, commentID, triggeredByMemberID uuid.UUID) (*agentdom.AgentConversation, error) {
+// message is the plain-text content of the comment so the agent's initial prompt
+// is populated without requiring a separate MCP call.
+func (s *Service) TriggerCommentMention(ctx context.Context, projectID, agentID, taskID, commentID, triggeredByMemberID uuid.UUID, message string) (*agentdom.AgentConversation, error) {
 	repoPlugins := s.gatherRepoPlugins(ctx)
 	repoPluginIDs := make([]string, 0, len(repoPlugins))
 	for _, p := range repoPlugins {
@@ -649,6 +651,7 @@ func (s *Service) TriggerCommentMention(ctx context.Context, projectID, agentID,
 		"comment_id":      commentID.String(),
 		"actor_member_id": triggeredByMemberID.String(),
 		"trigger_type":    "comment_mention",
+		"message":         message,
 		"repo_plugin_ids": strings.Join(repoPluginIDs, ","),
 	}
 	_ = s.publishTrigger(ctx, events.TopicAgentCommentMention, payload)
