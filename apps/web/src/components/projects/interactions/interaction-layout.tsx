@@ -42,9 +42,9 @@ import {
 	epicTasksQueryOptions,
 	type FilterConfig,
 	type InteractionView,
+	type ListTasksOptions,
 	layoutToViewType,
 	listAllTasks,
-	type ListTasksOptions,
 	reorderViewsByContext,
 	resolveFilterConfig,
 	resolveTaskTypeFilter,
@@ -588,22 +588,36 @@ export function InteractionLayout({
 		return getColumnGroupDefs(columnBy, viewCtx);
 	}, [isColumnBySupported, columnBy, viewCtx]);
 
-	const colQueriesEnabled = fetchColumnDefs.length > 0 && activeView?.layout !== "Roadmap";
+	const colQueriesEnabled =
+		fetchColumnDefs.length > 0 && activeView?.layout !== "Roadmap";
 
 	// Page size: board = 20, list/roadmap = 5 on first page
 	const isBoard = activeView?.layout === "Board";
 	const initialColPageSize = isBoard ? 20 : 5;
 
 	// Base options for column queries (shared filters, excluding the dimension used for column grouping)
-	const colBaseOpts = useMemo((): ListTasksOptions => ({
-		sprintId:
-			context !== "timeline" && !hasExplicitFilterConfig ? sprintId : undefined,
-		sprintIds: apiFilters.sprint_ids,
-		statusIds: columnBy !== "status" ? apiFilters.status_ids : undefined,
-		assigneeIds: columnBy !== "assignee" ? apiFilters.assignee_ids : undefined,
-		taskTypeIds: columnBy !== "type" ? apiFilters.task_type_ids : undefined,
-		pageSize: initialColPageSize,
-	}), [context, hasExplicitFilterConfig, sprintId, apiFilters, columnBy, initialColPageSize]);
+	const colBaseOpts = useMemo(
+		(): ListTasksOptions => ({
+			sprintId:
+				context !== "timeline" && !hasExplicitFilterConfig
+					? sprintId
+					: undefined,
+			sprintIds: apiFilters.sprint_ids,
+			statusIds: columnBy !== "status" ? apiFilters.status_ids : undefined,
+			assigneeIds:
+				columnBy !== "assignee" ? apiFilters.assignee_ids : undefined,
+			taskTypeIds: columnBy !== "type" ? apiFilters.task_type_ids : undefined,
+			pageSize: initialColPageSize,
+		}),
+		[
+			context,
+			hasExplicitFilterConfig,
+			sprintId,
+			apiFilters,
+			columnBy,
+			initialColPageSize,
+		],
+	);
 
 	const columnQueries = useQueries({
 		queries: colQueriesEnabled
@@ -659,9 +673,9 @@ export function InteractionLayout({
 	const [colExtraTasks, setColExtraTasks] = useState<Record<string, Task[]>>(
 		{},
 	);
-	const [colLoadingMore, setColLoadingMore] = useState<
-		Record<string, boolean>
-	>({});
+	const [colLoadingMore, setColLoadingMore] = useState<Record<string, boolean>>(
+		{},
+	);
 
 	// Sync next cursors from initial column query results; reset extras on re-fetch
 	const colDataUpdatedKey = columnQueries.map((q) => q.dataUpdatedAt).join(",");
@@ -703,13 +717,11 @@ export function InteractionLayout({
 				setColLoadingMore((prev) => ({ ...prev, [colKey]: false }));
 			}
 		},
-		[colNextCursors, columnBy, colBaseOpts, projectId],
+		[colNextCursors, columnBy, colBaseOpts, projectId, colLoadingMore],
 	);
 
 	// Global load-more (roadmap / non-column views)
-	const [globalNextCursor, setGlobalNextCursor] = useState<string | null>(
-		null,
-	);
+	const [globalNextCursor, setGlobalNextCursor] = useState<string | null>(null);
 	const [globalExtraTasks, setGlobalExtraTasks] = useState<Task[]>([]);
 	const [globalLoadingMore, setGlobalLoadingMore] = useState(false);
 
@@ -748,6 +760,7 @@ export function InteractionLayout({
 		hasExplicitFilterConfig,
 		sprintId,
 		apiFilters,
+		globalLoadingMore,
 	]);
 
 	const taskPositionsQuery = useQuery({

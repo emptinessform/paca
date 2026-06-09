@@ -69,7 +69,11 @@ export interface ListGroupProps {
 	extraCreateFields?: TaskFieldUpdate;
 	columnBy?: string;
 	onCollapseChange?: (collapsed: boolean) => void;
-	groupPagination?: { hasMore: boolean; isLoadingMore: boolean; onLoadMore: () => void };
+	groupPagination?: {
+		hasMore: boolean;
+		isLoadingMore: boolean;
+		onLoadMore: () => void;
+	};
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

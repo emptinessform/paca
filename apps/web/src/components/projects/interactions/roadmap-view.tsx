@@ -41,7 +41,11 @@ interface RoadmapViewProps {
 		taskTypeId?: string | null,
 	) => Promise<void>;
 	onTaskClick: (task: Task) => void;
-	pagination?: { hasMore: boolean; isLoadingMore: boolean; onLoadMore: () => void };
+	pagination?: {
+		hasMore: boolean;
+		isLoadingMore: boolean;
+		onLoadMore: () => void;
+	};
 }
 
 interface MonthCell {
