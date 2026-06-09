@@ -22,11 +22,6 @@ type taskCursor struct {
 	ID        string    `json:"id"`
 }
 
-func encodeTaskCursor(createdAt time.Time, id string) string {
-	b, _ := json.Marshal(taskCursor{CreatedAt: createdAt, ID: id})
-	return base64.URLEncoding.EncodeToString(b)
-}
-
 func decodeTaskCursor(s string) (*taskCursor, error) {
 	b, err := base64.URLEncoding.DecodeString(s)
 	if err != nil {
@@ -36,6 +31,7 @@ func decodeTaskCursor(s string) (*taskCursor, error) {
 	if err := json.Unmarshal(b, &c); err != nil {
 		return nil, fmt.Errorf("decode cursor json: %w", err)
 	}
+	c.CreatedAt = c.CreatedAt.UTC()
 	return &c, nil
 }
 
