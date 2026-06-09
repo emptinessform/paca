@@ -588,7 +588,7 @@ export function InteractionLayout({
 		return getColumnGroupDefs(columnBy, viewCtx);
 	}, [isColumnBySupported, columnBy, viewCtx]);
 
-	const colQueriesEnabled = fetchColumnDefs.length > 0;
+	const colQueriesEnabled = fetchColumnDefs.length > 0 && activeView?.layout !== "Roadmap";
 
 	// Page size: board = 20, list/roadmap = 5 on first page
 	const isBoard = activeView?.layout === "Board";
