@@ -23,8 +23,11 @@ type AgentResponse struct {
 	LLMProvider       string                   `json:"llm_provider"`
 	LLMModel          string                   `json:"llm_model"`
 	LLMBaseURL        *string                  `json:"llm_base_url,omitempty"`
-	SystemPrompt      string                   `json:"system_prompt"`
-	CanCloneRepos     bool                     `json:"can_clone_repos"`
+	SystemPrompt            string                   `json:"system_prompt"`
+	TaskTriggerPrompt       string                   `json:"task_trigger_prompt"`
+	DocCommentTriggerPrompt string                   `json:"doc_comment_trigger_prompt"`
+	ChatTriggerPrompt       string                   `json:"chat_trigger_prompt"`
+	CanCloneRepos           bool                     `json:"can_clone_repos"`
 	CanCreatePRs      bool                     `json:"can_create_prs"`
 	MaxIterations     int                      `json:"max_iterations"`
 	TimeoutMinutes    int                      `json:"timeout_minutes"`
@@ -45,14 +48,17 @@ type CreateAgentRequest struct {
 	LLMModel          string    `json:"llm_model" binding:"required"`
 	LLMAPIKey         string    `json:"llm_api_key" binding:"required"`
 	LLMBaseURL        *string   `json:"llm_base_url"`
-	SystemPrompt      string    `json:"system_prompt"`
-	CanCloneRepos     bool      `json:"can_clone_repos"`
-	CanCreatePRs      bool      `json:"can_create_prs"`
-	MaxIterations     int       `json:"max_iterations"`
-	TimeoutMinutes    int       `json:"timeout_minutes"`
-	GitCommitterName  string    `json:"git_committer_name"`
-	GitCommitterEmail string    `json:"git_committer_email"`
-	ProjectRoleID     uuid.UUID `json:"project_role_id" binding:"required"`
+	SystemPrompt            string    `json:"system_prompt"`
+	TaskTriggerPrompt       string    `json:"task_trigger_prompt"`
+	DocCommentTriggerPrompt string    `json:"doc_comment_trigger_prompt"`
+	ChatTriggerPrompt       string    `json:"chat_trigger_prompt"`
+	CanCloneRepos           bool      `json:"can_clone_repos"`
+	CanCreatePRs            bool      `json:"can_create_prs"`
+	MaxIterations           int       `json:"max_iterations"`
+	TimeoutMinutes          int       `json:"timeout_minutes"`
+	GitCommitterName        string    `json:"git_committer_name"`
+	GitCommitterEmail       string    `json:"git_committer_email"`
+	ProjectRoleID           uuid.UUID `json:"project_role_id" binding:"required"`
 }
 
 // UpdateAgentRequest is the body for PATCH /projects/:projectId/agents/:agentId.
@@ -63,13 +69,16 @@ type UpdateAgentRequest struct {
 	LLMModel          *string `json:"llm_model"`
 	LLMAPIKey         *string `json:"llm_api_key"`
 	LLMBaseURL        *string `json:"llm_base_url"`
-	SystemPrompt      *string `json:"system_prompt"`
-	CanCloneRepos     *bool   `json:"can_clone_repos"`
-	CanCreatePRs      *bool   `json:"can_create_prs"`
-	MaxIterations     *int    `json:"max_iterations"`
-	TimeoutMinutes    *int    `json:"timeout_minutes"`
-	GitCommitterName  *string `json:"git_committer_name"`
-	GitCommitterEmail *string `json:"git_committer_email"`
+	SystemPrompt            *string `json:"system_prompt"`
+	TaskTriggerPrompt       *string `json:"task_trigger_prompt"`
+	DocCommentTriggerPrompt *string `json:"doc_comment_trigger_prompt"`
+	ChatTriggerPrompt       *string `json:"chat_trigger_prompt"`
+	CanCloneRepos           *bool   `json:"can_clone_repos"`
+	CanCreatePRs            *bool   `json:"can_create_prs"`
+	MaxIterations           *int    `json:"max_iterations"`
+	TimeoutMinutes          *int    `json:"timeout_minutes"`
+	GitCommitterName        *string `json:"git_committer_name"`
+	GitCommitterEmail       *string `json:"git_committer_email"`
 }
 
 // AgentFromEntity maps an Agent entity to AgentResponse.
@@ -84,8 +93,11 @@ func AgentFromEntity(a *agentdom.Agent) AgentResponse {
 		LLMProvider:       a.LLMProvider,
 		LLMModel:          a.LLMModel,
 		LLMBaseURL:        a.LLMBaseURL,
-		SystemPrompt:      a.SystemPrompt,
-		CanCloneRepos:     a.CanCloneRepos,
+		SystemPrompt:            a.SystemPrompt,
+		TaskTriggerPrompt:       a.TaskTriggerPrompt,
+		DocCommentTriggerPrompt: a.DocCommentTriggerPrompt,
+		ChatTriggerPrompt:       a.ChatTriggerPrompt,
+		CanCloneRepos:           a.CanCloneRepos,
 		CanCreatePRs:      a.CanCreatePRs,
 		MaxIterations:     a.MaxIterations,
 		TimeoutMinutes:    a.TimeoutMinutes,

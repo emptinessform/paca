@@ -62,6 +62,7 @@ import {
 	createAgent,
 	deleteAgent,
 	llmModelsQueryOptions,
+	TRIGGER_PROMPTS,
 } from "@/lib/agent-api";
 import { projectRolesQueryOptions } from "@/lib/project-api";
 import { cn } from "@/lib/utils";
@@ -155,6 +156,9 @@ function CreateAgentDialog({
 				llm_api_key: llmApiKey,
 				llm_base_url: llmBaseUrl || null,
 				system_prompt: systemPrompt,
+				task_trigger_prompt: TRIGGER_PROMPTS.task,
+				doc_comment_trigger_prompt: TRIGGER_PROMPTS.docComment,
+				chat_trigger_prompt: TRIGGER_PROMPTS.chat,
 				project_role_id: roleId,
 			}),
 		onSuccess: () => {

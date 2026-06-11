@@ -106,8 +106,11 @@ func (s *Service) CreateAgent(ctx context.Context, projectID uuid.UUID, in agent
 		LLMModel:          in.LLMModel,
 		LLMAPIKeySecret:   encryptedKey,
 		LLMBaseURL:        in.LLMBaseURL,
-		SystemPrompt:      in.SystemPrompt,
-		CanCloneRepos:     in.CanCloneRepos,
+		SystemPrompt:            in.SystemPrompt,
+		TaskTriggerPrompt:       in.TaskTriggerPrompt,
+		DocCommentTriggerPrompt: in.DocCommentTriggerPrompt,
+		ChatTriggerPrompt:       in.ChatTriggerPrompt,
+		CanCloneRepos:           in.CanCloneRepos,
 		CanCreatePRs:      in.CanCreatePRs,
 		MaxIterations:     in.MaxIterations,
 		TimeoutMinutes:    in.TimeoutMinutes,
@@ -188,6 +191,15 @@ func (s *Service) UpdateAgent(ctx context.Context, projectID, agentID uuid.UUID,
 	}
 	if in.SystemPrompt != nil {
 		a.SystemPrompt = *in.SystemPrompt
+	}
+	if in.TaskTriggerPrompt != nil {
+		a.TaskTriggerPrompt = *in.TaskTriggerPrompt
+	}
+	if in.DocCommentTriggerPrompt != nil {
+		a.DocCommentTriggerPrompt = *in.DocCommentTriggerPrompt
+	}
+	if in.ChatTriggerPrompt != nil {
+		a.ChatTriggerPrompt = *in.ChatTriggerPrompt
 	}
 	if in.CanCloneRepos != nil {
 		a.CanCloneRepos = *in.CanCloneRepos

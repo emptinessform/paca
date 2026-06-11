@@ -60,6 +60,7 @@ import {
 	deleteMCPServer,
 	deleteSkill,
 	llmModelsQueryOptions,
+	TRIGGER_PROMPTS,
 	updateAgent,
 	updateMCPServer,
 	updateSkill,
@@ -247,6 +248,39 @@ function OverviewTab({
 					disabled={!canWrite}
 					className="font-mono text-xs"
 				/>
+			</div>
+
+			<div className="space-y-2">
+				<div>
+					<Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+						Auto-appended trigger prompts
+					</Label>
+					<p className="mt-1 text-[10px] text-muted-foreground">
+						Automatically appended to the system prompt at runtime based on how
+						the agent is invoked. Not editable.
+					</p>
+				</div>
+				{(
+					[
+						["Task assignment / task comment", TRIGGER_PROMPTS.task],
+						["Documentation comment @mention", TRIGGER_PROMPTS.docComment],
+						["Direct chat", TRIGGER_PROMPTS.chat],
+					] as [string, string][]
+				).map(([label, prompt]) => (
+					<details
+						key={label}
+						className="group rounded-md border border-border/60 bg-muted/20"
+					>
+						<summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-medium">
+							{label}
+						</summary>
+						<div className="border-t border-border/60 px-3 py-2">
+							<pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-muted-foreground">
+								{prompt}
+							</pre>
+						</div>
+					</details>
+				))}
 			</div>
 
 			<Separator />
