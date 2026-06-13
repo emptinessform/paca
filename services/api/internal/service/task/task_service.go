@@ -11,8 +11,7 @@ import (
 )
 
 var reservedSystemTypeNames = map[string]bool{
-	"Epic":    true,
-	"Subtask": true,
+	"Epic": true,
 }
 
 // Service is the concrete implementation of taskdom.Service.
@@ -208,6 +207,18 @@ func (s *Service) SetDefaultTaskStatus(ctx context.Context, projectID, statusID 
 	return s.repo.FindTaskStatusByID(ctx, statusID)
 }
 
+// isEpicTaskType returns true when typeID belongs to the system Epic type.
+func (s *Service) isEpicTaskType(ctx context.Context, typeID *uuid.UUID) bool {
+	if typeID == nil {
+		return false
+	}
+	t, err := s.repo.FindTaskTypeByID(ctx, *typeID)
+	if err != nil {
+		return false
+	}
+	return t.IsSystem && t.Name == "Epic"
+}
+
 // --- Tasks ------------------------------------------------------------------
 
 // ListTasks returns a page of tasks. When filter.CursorAfter is nil, returns from
@@ -243,6 +254,12 @@ func (s *Service) CreateTask(ctx context.Context, in taskdom.CreateTaskInput) (*
 	title := strings.TrimSpace(in.Title)
 	if title == "" {
 		return nil, taskdom.ErrTaskTitleInvalid
+	}
+
+	if in.ParentTaskID != nil {
+		if s.isEpicTaskType(ctx, in.TaskTypeID) {
+			return nil, taskdom.ErrEpicCannotHaveParent
+		}
 	}
 
 	taskTypeID := in.TaskTypeID
@@ -313,6 +330,25 @@ func (s *Service) UpdateTask(ctx context.Context, projectID, id uuid.UUID, in ta
 	if title := strings.TrimSpace(in.Title); title != "" {
 		t.Title = title
 	}
+
+	// Compute the effective parent and type IDs after the update to validate constraints.
+	effectiveParentID := t.ParentTaskID
+	if in.ParentTaskID != nil {
+		effectiveParentID = *in.ParentTaskID
+	}
+	effectiveTypeID := t.TaskTypeID
+	if in.TaskTypeID != nil {
+		effectiveTypeID = *in.TaskTypeID
+	}
+	if effectiveParentID != nil {
+		if *effectiveParentID == t.ID {
+			return nil, taskdom.ErrTaskCannotBeOwnParent
+		}
+		if s.isEpicTaskType(ctx, effectiveTypeID) {
+			return nil, taskdom.ErrEpicCannotHaveParent
+		}
+	}
+
 	if in.TaskTypeID != nil {
 		t.TaskTypeID = *in.TaskTypeID
 	}
