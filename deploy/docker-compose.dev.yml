@@ -186,6 +186,19 @@ services:
       timeout: 5s
       retries: 10
 
+  mcp:
+    image: oven/bun:1-alpine
+    working_dir: /workspace
+    command: sh -c "bun install && bun run watch"
+    volumes:
+      - ../apps/mcp:/workspace
+    healthcheck:
+      test: ["CMD", "test", "-f", "/workspace/build/index.js"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
   ai-agent:
     build:
       context: ../services/ai-agent
@@ -211,6 +224,9 @@ services:
       PORT_POOL_SIZE: "100"
       WORKER_CONCURRENCY: "5"
       LOG_LEVEL: INFO
+      # Use the local MCP source build instead of the published npm package.
+      # apps/mcp is mounted at /mcp so the built entry point is always available.
+      DEV_MCP_PATH: /mcp/build/index.js
     volumes:
       - ../services/ai-agent:/app
       - ../apps/mcp:/mcp:ro
@@ -224,6 +240,8 @@ services:
         condition: service_healthy
       api:
         condition: service_started
+      mcp:
+        condition: service_healthy
 
 volumes:
   postgres_data:

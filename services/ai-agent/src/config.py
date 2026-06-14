@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # server.  Set this to the same value as AGENT_API_KEY on the api service.
     # When empty the built-in paca MCP server is not injected.
     paca_api_key: str = ""
+    # Development override — absolute path to the local MCP build entry point
+    # (e.g. /workspace/apps/mcp/build/index.js).  When set, the agent runs
+    # the local build instead of the published @paca-ai/paca-mcp npm package.
+    dev_mcp_path: str = ""
 
     # AES-256 encryption key (hex-encoded, 64 chars) shared with the API service.
     # Set via ENCRYPTION_KEY (same variable used by the api service).
