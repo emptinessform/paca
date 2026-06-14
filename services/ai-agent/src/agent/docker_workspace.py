@@ -211,6 +211,38 @@ def docker_sandbox(
                 "will inject repo_tools into the sandbox container directly."
             )
 
+        # When DEV_MCP_PATH is set, the MCP server is a local file on a bind-
+        # mounted volume (e.g. /mcp/build/index.js).  The OpenHands runtime
+        # runs the MCP subprocess *inside* the sandbox container, so the same
+        # volume must be forwarded there.  We resolve the host-side source of
+        # the bind mount so Docker can re-attach it to the sibling container.
+        if settings.dev_mcp_path and _is_inside_docker():
+            path_parts = Path(settings.dev_mcp_path).parts
+            if len(path_parts) < 2:
+                logger.warning(
+                    "DEV_MCP_PATH=%s has no parent directory component; "
+                    "skipping sandbox volume injection.",
+                    settings.dev_mcp_path,
+                )
+                path_parts = ()
+            mcp_bind_dir = ("/" + path_parts[1]) if path_parts else None
+            mcp_host_path = _find_host_path_for(client, mcp_bind_dir) if mcp_bind_dir else None
+            if mcp_host_path:
+                volumes[mcp_host_path] = {"bind": mcp_bind_dir, "mode": "ro"}
+                logger.debug(
+                    "Sharing MCP source into sandbox: host=%s → container=%s",
+                    mcp_host_path,
+                    mcp_bind_dir,
+                )
+            else:
+                logger.warning(
+                    "DEV_MCP_PATH=%s is set but %s is not a recognised bind-mount "
+                    "on this container; the MCP server will likely fail to start "
+                    "inside the sandbox.",
+                    settings.dev_mcp_path,
+                    mcp_bind_dir,
+                )
+
         # ── Environment ───────────────────────────────────────────────────────
         environment: dict = {
             # OH_SECRET_KEY is required by the agent server to encrypt persisted

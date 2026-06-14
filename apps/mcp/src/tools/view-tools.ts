@@ -20,6 +20,8 @@ const CreateViewSchema = z.object({
 const ReorderViewsSchema = z.object({
 	projectId: z.string(),
 	viewIds: z.array(z.string()),
+	context: z.string().optional(),
+	sprintId: z.string().optional(),
 });
 
 const GetViewSchema = z.object({
@@ -167,6 +169,14 @@ export function getViewTools(): Tool[] {
 						type: "array",
 						items: { type: "string" },
 						description: "Array of view IDs in new order",
+					},
+					context: {
+						type: "string",
+						description: "The view context: 'sprint', 'backlog', or 'timeline'.",
+					},
+					sprintId: {
+						type: "string",
+						description: "The sprint ID (required when context is 'sprint').",
 					},
 				},
 				required: ["projectId", "viewIds"],
@@ -509,9 +519,14 @@ export async function handleViewTool(
 				CreateViewSchema.parse(args);
 			const view = await client.createView(
 				projectId,
-				{ name, view_type: viewType as any },
+				{
+					name,
+					context,
+					view_type: viewType as any,
+					sprint_id: sprintId ?? null,
+				},
 				context,
-				sprintId ?? null,
+				sprintId,
 			);
 			return {
 				content: [
@@ -524,8 +539,8 @@ export async function handleViewTool(
 		}
 
 		case "reorder_views": {
-			const { projectId, viewIds } = ReorderViewsSchema.parse(args);
-			await client.reorderViews(projectId, { view_ids: viewIds });
+			const { projectId, viewIds, context, sprintId } = ReorderViewsSchema.parse(args);
+			await client.reorderViews(projectId, { view_ids: viewIds }, context, sprintId);
 			return {
 				content: [
 					{
