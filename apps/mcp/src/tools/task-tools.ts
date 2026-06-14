@@ -346,8 +346,11 @@ export async function handleTaskTool(
 ): Promise<any> {
 	switch (toolName) {
 		case "list_tasks": {
-			const { projectId, cursor, pageSize, sprintId, statusId, assigneeId, taskTypeIds, parentTaskId } = ListTasksSchema.parse(args);
-			const result = await client.listTasks(projectId, { cursor, pageSize, sprintId, statusId, assigneeId, taskTypeIds, parentTaskId });
+			const { projectId, cursor, pageSize, sprintId, statusId, assigneeId, taskTypeIds, parentTaskId } =
+				ListTasksSchema.parse(args);
+			const result = await client.listTasks(projectId, {
+				cursor, pageSize, sprintId, statusId, assigneeId, taskTypeIds, parentTaskId,
+			});
 			const formatted = formatList(result.items, formatTask);
 			const hasMore = Boolean(result.nextCursor);
 			const nextCursorNote = hasMore

@@ -58,7 +58,7 @@ def with_paca_key():
         m.paca_api_key = "test-api-key"
         m.api_base_url = "http://api:8080"
         m.gateway_base_url = "http://gateway"
-        m.dev_mcp_path = None
+        m.dev_mcp_path = ""
         yield m
 
 
@@ -150,6 +150,14 @@ def test_paca_server_injected_when_key_set(with_paca_key):
     assert paca["env"]["PACA_AGENT_ID"] == "agent-99"
     assert paca["env"]["PACA_PROJECT_ID"] == "proj-42"
     assert paca["env"]["PACA_API_KEY"] == "test-api-key"
+
+
+def test_paca_server_uses_local_build_when_dev_mcp_path_set(with_paca_key):
+    with_paca_key.dev_mcp_path = "/mcp/build/index.js"
+    cfg = build_mcp_config([], "agent-99", "proj-42")
+    paca = cfg["mcpServers"]["paca"]
+    assert paca["command"] == "node"
+    assert paca["args"] == ["/mcp/build/index.js"]
 
 
 def test_paca_server_omitted_when_no_key(no_paca_key):

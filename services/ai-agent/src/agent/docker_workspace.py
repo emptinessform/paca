@@ -217,8 +217,16 @@ def docker_sandbox(
         # volume must be forwarded there.  We resolve the host-side source of
         # the bind mount so Docker can re-attach it to the sibling container.
         if settings.dev_mcp_path and _is_inside_docker():
-            mcp_bind_dir = "/" + Path(settings.dev_mcp_path).parts[1]
-            mcp_host_path = _find_host_path_for(client, mcp_bind_dir)
+            path_parts = Path(settings.dev_mcp_path).parts
+            if len(path_parts) < 2:
+                logger.warning(
+                    "DEV_MCP_PATH=%s has no parent directory component; "
+                    "skipping sandbox volume injection.",
+                    settings.dev_mcp_path,
+                )
+                path_parts = ()
+            mcp_bind_dir = ("/" + path_parts[1]) if path_parts else None
+            mcp_host_path = _find_host_path_for(client, mcp_bind_dir) if mcp_bind_dir else None
             if mcp_host_path:
                 volumes[mcp_host_path] = {"bind": mcp_bind_dir, "mode": "ro"}
                 logger.debug(

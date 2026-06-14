@@ -341,6 +341,16 @@ def _make_token_callback(
     return on_token
 
 
+def _build_project_context_suffix(project_id: str) -> str:
+    return (
+        f"\n\n## Current Project Context\n"
+        f"You are working inside project `{project_id}`.\n"
+        "**Always pass this value as `projectId` in every MCP tool call** "
+        "that requires it — never ask the user for the project ID and "
+        "never call `list_projects` to find it.\n"
+    )
+
+
 # ─── Main entry point ─────────────────────────────────────────────────────────
 
 
@@ -366,13 +376,7 @@ async def run_conversation(trigger: TriggerMessage, agent_config: AgentConfig) -
 
         # Inject current project context so the AI never needs to ask for the
         # project ID or call list_projects to discover it.
-        system_suffix += (
-            f"\n\n## Current Project Context\n"
-            f"You are working inside project `{trigger.project_id}`.\n"
-            "**Always pass this value as `projectId` in every MCP tool call** "
-            "that requires it — never ask the user for the project ID and "
-            "never call `list_projects` to find it.\n"
-        )
+        system_suffix += _build_project_context_suffix(trigger.project_id)
 
         # Documentation workflow — always read project docs first, always write to Paca.
         system_suffix += (
