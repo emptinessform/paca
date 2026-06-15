@@ -108,9 +108,14 @@ function OverviewTab({
 	const providers = Object.keys(llmModels);
 
 	// Provider select: if agent's provider is known, use it directly; otherwise custom mode
-	const knownProvider = providers.length > 0 && providers.includes(agent.llm_provider);
+	const knownProvider =
+		providers.length > 0 && providers.includes(agent.llm_provider);
 	const [providerSelect, setProviderSelect] = useState(
-		knownProvider ? agent.llm_provider : agent.llm_provider ? CUSTOM : "anthropic",
+		knownProvider
+			? agent.llm_provider
+			: agent.llm_provider
+				? CUSTOM
+				: "anthropic",
 	);
 	const [customProvider, setCustomProvider] = useState(
 		knownProvider ? "" : agent.llm_provider,
@@ -122,7 +127,9 @@ function OverviewTab({
 	const [modelSelect, setModelSelect] = useState(
 		knownModel ? agent.llm_model : agent.llm_model ? CUSTOM : "",
 	);
-	const [customModel, setCustomModel] = useState(knownModel ? "" : agent.llm_model);
+	const [customModel, setCustomModel] = useState(
+		knownModel ? "" : agent.llm_model,
+	);
 
 	const [name, setName] = useState(agent.name);
 	const [llmApiKey, setLlmApiKey] = useState("");
@@ -146,7 +153,8 @@ function OverviewTab({
 	);
 
 	// Derived final values sent to the API
-	const llmProvider = providerSelect === CUSTOM ? customProvider.trim() : providerSelect;
+	const llmProvider =
+		providerSelect === CUSTOM ? customProvider.trim() : providerSelect;
 	const llmModel = modelSelect === CUSTOM ? customModel.trim() : modelSelect;
 
 	const handleProviderChange = (v: string | null) => {
@@ -179,8 +187,6 @@ function OverviewTab({
 		committerName !== agent.git_committer_name ||
 		committerEmail !== agent.git_committer_email;
 
-	const canSave = isDirty && !!llmProvider && !!llmModel && !!llmBaseUrl.trim() && !saveMutation.isPending;
-
 	const saveMutation = useMutation({
 		mutationFn: () =>
 			updateAgent(projectId, agent.id, {
@@ -203,6 +209,13 @@ function OverviewTab({
 			setLlmApiKey("");
 		},
 	});
+
+	const canSave =
+		isDirty &&
+		!!llmProvider &&
+		!!llmModel &&
+		!!llmBaseUrl.trim() &&
+		!saveMutation.isPending;
 
 	return (
 		<div className="space-y-6 max-w-2xl">
@@ -434,10 +447,7 @@ function OverviewTab({
 
 			{canWrite && (
 				<div className="flex items-center gap-3 pt-2">
-					<Button
-						onClick={() => saveMutation.mutate()}
-						disabled={!canSave}
-					>
+					<Button onClick={() => saveMutation.mutate()} disabled={!canSave}>
 						{saveMutation.isPending ? (
 							<Loader2 className="size-4 mr-2 animate-spin" />
 						) : (

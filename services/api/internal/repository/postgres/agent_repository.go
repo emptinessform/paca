@@ -898,4 +898,3 @@ func chatSessionToRecord(s *agentdom.AgentChatSession) agentChatSessionRecord {
 		UpdatedAt:     s.UpdatedAt,
 	}
 }
-

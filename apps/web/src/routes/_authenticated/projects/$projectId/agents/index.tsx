@@ -121,7 +121,8 @@ function CreateAgentDialog({
 	const [showApiKey, setShowApiKey] = useState(false);
 
 	// Derived final values sent to the API
-	const llmProvider = providerSelect === CUSTOM ? customProvider.trim() : providerSelect;
+	const llmProvider =
+		providerSelect === CUSTOM ? customProvider.trim() : providerSelect;
 	const llmModel = modelSelect === CUSTOM ? customModel.trim() : modelSelect;
 
 	const reset = () => {
@@ -166,7 +167,8 @@ function CreateAgentDialog({
 				setLlmBaseUrl(llmModels[preset.defaultLLMProvider]?.base_url ?? "");
 			}
 			if (preset.defaultLLMModel) setModelSelect(preset.defaultLLMModel);
-			if (preset.defaultSystemPrompt) setSystemPrompt(preset.defaultSystemPrompt);
+			if (preset.defaultSystemPrompt)
+				setSystemPrompt(preset.defaultSystemPrompt);
 		}
 	};
 
@@ -394,7 +396,10 @@ function CreateAgentDialog({
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-1.5">
 									<Label>Provider</Label>
-									<Select value={providerSelect} onValueChange={handleProviderChange}>
+									<Select
+										value={providerSelect}
+										onValueChange={handleProviderChange}
+									>
 										<SelectTrigger>
 											<SelectValue />
 										</SelectTrigger>
