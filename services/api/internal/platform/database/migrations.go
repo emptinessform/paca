@@ -2,18 +2,17 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"gorm.io/gorm"
 )
 
 // RunMigrations executes all *.sql files found in migrationsDir against db in
 // lexicographic order.  Each file is run inside its own transaction; an error
 // in any file halts the run.
-func RunMigrations(db *gorm.DB, migrationsDir string) error {
+func RunMigrations(db *sql.DB, migrationsDir string) error {
 	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return fmt.Errorf("migrations: read dir %q: %w", migrationsDir, err)
@@ -30,7 +29,7 @@ func RunMigrations(db *gorm.DB, migrationsDir string) error {
 			return fmt.Errorf("migrations: read %q: %w", path, err)
 		}
 
-		if err := db.Exec(string(data)).Error; err != nil {
+		if _, err := db.Exec(string(data)); err != nil {
 			return fmt.Errorf("migrations: exec %q: %w", path, err)
 		}
 	}
@@ -42,7 +41,7 @@ func RunMigrations(db *gorm.DB, migrationsDir string) error {
 // lexicographic order) against db.  All SQL files must be idempotent
 // (CREATE TABLE IF NOT EXISTS, INSERT … ON CONFLICT, etc.) so the function
 // is safe to call on every startup in any environment.
-func RunMigrationsFS(db *gorm.DB, fsys fs.FS) error {
+func RunMigrationsFS(db *sql.DB, fsys fs.FS) error {
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return fmt.Errorf("migrations: read dir: %w", err)
@@ -58,7 +57,7 @@ func RunMigrationsFS(db *gorm.DB, fsys fs.FS) error {
 			return fmt.Errorf("migrations: read %q: %w", e.Name(), err)
 		}
 
-		if err := db.Exec(string(data)).Error; err != nil {
+		if _, err := db.Exec(string(data)); err != nil {
 			return fmt.Errorf("migrations: exec %q: %w", e.Name(), err)
 		}
 	}

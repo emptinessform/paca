@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/go-chi/chi/v5"
 	"sync"
 	"testing"
 	"time"
@@ -15,7 +17,6 @@ import (
 	notificationdom "github.com/Paca-AI/api/internal/domain/notification"
 	"github.com/Paca-AI/api/internal/transport/http/handler"
 	"github.com/Paca-AI/api/internal/transport/http/middleware"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -66,18 +67,18 @@ func (m *mockNotificationSvc) MarkAllAsRead(ctx context.Context, userID uuid.UUI
 
 var _ notificationdom.Service = (*mockNotificationSvc)(nil)
 
-func buildNotificationRouter(svc *mockNotificationSvc) *gin.Engine {
-	gin.SetMode(gin.TestMode)
+func buildNotificationRouter(svc *mockNotificationSvc) chi.Router {
 	h := handler.NewNotificationHandler(svc)
-	r := gin.New()
-	g := r.Group("/users")
-	g.GET("/me/notifications", h.List)
-	g.PATCH("/me/notifications/:notificationId/read", h.MarkAsRead)
-	g.POST("/me/notifications/read-all", h.MarkAllAsRead)
+	r := chi.NewRouter()
+	r.Route("/users", func(r chi.Router) {
+		r.Get("/me/notifications", h.List)
+		r.Patch("/me/notifications/{notificationId}/read", h.MarkAsRead)
+		r.Post("/me/notifications/read-all", h.MarkAllAsRead)
+	})
 	return r
 }
 
-func doNotifRequest(r *gin.Engine, method, path string, body any) *httptest.ResponseRecorder {
+func doNotifRequest(r chi.Router, method, path string, body any) *httptest.ResponseRecorder {
 	var buf *bytes.Buffer
 	if body != nil {
 		b, _ := json.Marshal(body)
@@ -94,7 +95,7 @@ func doNotifRequest(r *gin.Engine, method, path string, body any) *httptest.Resp
 	return w
 }
 
-func doNotifRequestWithActor(r *gin.Engine, method, path string, body any, actorID uuid.UUID) *httptest.ResponseRecorder {
+func doNotifRequestWithActor(r chi.Router, method, path string, body any, actorID uuid.UUID) *httptest.ResponseRecorder {
 	var buf *bytes.Buffer
 	if body != nil {
 		b, _ := json.Marshal(body)

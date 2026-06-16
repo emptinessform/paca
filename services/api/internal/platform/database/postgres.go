@@ -1,4 +1,4 @@
-// Package database provides PostgreSQL connectivity via GORM.
+// Package database provides PostgreSQL connectivity via sqlx.
 package database
 
 import (
@@ -6,9 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/jackc/pgx/v5/stdlib" // register "pgx" driver
 )
 
 // Config holds the settings required to open a database connection.
@@ -17,30 +16,18 @@ type Config struct {
 	DSN string
 }
 
-// Open establishes a GORM PostgreSQL connection using the settings in cfg.
-func Open(cfg Config, log *slog.Logger) (*gorm.DB, error) {
-	return openPostgres(cfg.DSN, log)
-}
-
-// openPostgres opens a standard PostgreSQL connection via gorm+pgx.
-func openPostgres(dsn string, log *slog.Logger) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
-	})
+// Open establishes a sqlx PostgreSQL connection using the settings in cfg.
+func Open(cfg Config, log *slog.Logger) (*sqlx.DB, error) {
+	db, err := sqlx.Open("pgx", cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("database: open: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("database: get sql.DB: %w", err)
-	}
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(30 * time.Minute)
 
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetConnMaxLifetime(30 * time.Minute)
-
-	if err := sqlDB.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("database: ping: %w", err)
 	}
 
