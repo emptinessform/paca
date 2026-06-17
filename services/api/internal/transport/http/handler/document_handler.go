@@ -92,7 +92,7 @@ func (h *DocumentHandler) UpdateFolder(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	folderID, err := parseDocFolderID(w, r)
+	folderID, err := parseDocFolderID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -123,7 +123,7 @@ func (h *DocumentHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	folderID, err := parseDocFolderID(w, r)
+	folderID, err := parseDocFolderID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -177,7 +177,7 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -246,7 +246,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 
 // UpdateDocument handles PATCH /projects/:projectId/docs/:docId.
 func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -307,7 +307,7 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 		presenter.Error(w, r, err)
 		return
 	}
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -343,7 +343,7 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 
 // ListSnapshots handles GET /projects/:projectId/docs/:docId/snapshots.
 func (h *DocumentHandler) ListSnapshots(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -362,7 +362,7 @@ func (h *DocumentHandler) ListSnapshots(w http.ResponseWriter, r *http.Request) 
 
 // GetSnapshot handles GET /projects/:projectId/docs/:docId/snapshots/:snapshotId.
 func (h *DocumentHandler) GetSnapshot(w http.ResponseWriter, r *http.Request) {
-	snapshotID, err := parseDocSnapshotID(w, r)
+	snapshotID, err := parseDocSnapshotID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -381,7 +381,7 @@ func (h *DocumentHandler) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 
 // ListActivities handles GET /projects/:projectId/docs/:docId/activities.
 func (h *DocumentHandler) ListActivities(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -405,7 +405,7 @@ func (h *DocumentHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -453,7 +453,7 @@ func (h *DocumentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) 
 		presenter.Error(w, r, err)
 		return
 	}
-	commentID, err := parseDocCommentID(w, r)
+	commentID, err := parseDocCommentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -495,7 +495,7 @@ func (h *DocumentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) 
 		presenter.Error(w, r, err)
 		return
 	}
-	commentID, err := parseDocCommentID(w, r)
+	commentID, err := parseDocCommentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -524,7 +524,7 @@ func (h *DocumentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) 
 // Parse helpers
 // =============================================================================
 
-func parseDocID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseDocID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "docId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid document id")
@@ -532,7 +532,7 @@ func parseDocID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
 	return id, nil
 }
 
-func parseDocFolderID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseDocFolderID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "folderId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid folder id")
@@ -540,7 +540,7 @@ func parseDocFolderID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error)
 	return id, nil
 }
 
-func parseDocSnapshotID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseDocSnapshotID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "snapshotId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid snapshot id")
@@ -548,7 +548,7 @@ func parseDocSnapshotID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, erro
 	return id, nil
 }
 
-func parseDocCommentID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseDocCommentID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "commentId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid comment id")

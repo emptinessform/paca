@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Paca-AI/api/internal/platform/authz"
@@ -19,6 +21,9 @@ func (s *AuthzPermissionStore) GetAgentProjectRoleName(ctx context.Context, agen
 		JOIN project_members pm ON pm.project_role_id = pr.id
 		WHERE pm.agent_id = $1 AND pm.project_id = $2 AND pm.deleted_at IS NULL`,
 		agentID.String(), projectID.String())
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("agent not found in project")
+	}
 	if err != nil {
 		return "", fmt.Errorf("authz store: get agent project role name: %w", err)
 	}

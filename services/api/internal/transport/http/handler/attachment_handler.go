@@ -33,7 +33,7 @@ func (h *AttachmentHandler) InitiateUpload(w http.ResponseWriter, r *http.Reques
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -88,7 +88,7 @@ func (h *AttachmentHandler) CompleteUpload(w http.ResponseWriter, r *http.Reques
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -144,7 +144,7 @@ func (h *AttachmentHandler) ListTaskAttachments(w http.ResponseWriter, r *http.R
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -173,12 +173,12 @@ func (h *AttachmentHandler) GetDownloadURL(w http.ResponseWriter, r *http.Reques
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
 	}
-	attachmentID, err := parseAttachmentID(w, r)
+	attachmentID, err := parseAttachmentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -202,12 +202,12 @@ func (h *AttachmentHandler) DeleteTaskAttachment(w http.ResponseWriter, r *http.
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
 	}
-	attachmentID, err := parseAttachmentID(w, r)
+	attachmentID, err := parseAttachmentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -223,7 +223,7 @@ func (h *AttachmentHandler) DeleteTaskAttachment(w http.ResponseWriter, r *http.
 
 // --- helpers ---------------------------------------------------------------
 
-func parseAttachmentID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseAttachmentID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid attachment id")

@@ -221,7 +221,7 @@ func (h *AgentHandler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 // parseAgentForProject parses projectId and agentId, verifies the agent belongs
 // to the project, and returns both IDs. Handlers that operate on agent sub-resources
 // (MCP servers, skills) must call this instead of parsing agentId alone.
-func (h *AgentHandler) parseAgentForProject(_ http.ResponseWriter, r *http.Request) (projectID, agentID uuid.UUID, err error) {
+func (h *AgentHandler) parseAgentForProject(r *http.Request) (projectID, agentID uuid.UUID, err error) {
 	projectID, err = parseProjectID(r)
 	if err != nil {
 		return
@@ -239,7 +239,7 @@ func (h *AgentHandler) parseAgentForProject(_ http.ResponseWriter, r *http.Reque
 
 // ListMCPServers handles GET /projects/:projectId/agents/:agentId/mcp-servers.
 func (h *AgentHandler) ListMCPServers(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -258,7 +258,7 @@ func (h *AgentHandler) ListMCPServers(w http.ResponseWriter, r *http.Request) {
 
 // AddMCPServer handles POST /projects/:projectId/agents/:agentId/mcp-servers.
 func (h *AgentHandler) AddMCPServer(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -295,7 +295,7 @@ func (h *AgentHandler) AddMCPServer(w http.ResponseWriter, r *http.Request) {
 
 // UpdateMCPServer handles PATCH /projects/:projectId/agents/:agentId/mcp-servers/:serverId.
 func (h *AgentHandler) UpdateMCPServer(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -326,7 +326,7 @@ func (h *AgentHandler) UpdateMCPServer(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMCPServer handles DELETE /projects/:projectId/agents/:agentId/mcp-servers/:serverId.
 func (h *AgentHandler) DeleteMCPServer(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -347,7 +347,7 @@ func (h *AgentHandler) DeleteMCPServer(w http.ResponseWriter, r *http.Request) {
 
 // ListSkills handles GET /projects/:projectId/agents/:agentId/skills.
 func (h *AgentHandler) ListSkills(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -366,7 +366,7 @@ func (h *AgentHandler) ListSkills(w http.ResponseWriter, r *http.Request) {
 
 // AddSkill handles POST /projects/:projectId/agents/:agentId/skills.
 func (h *AgentHandler) AddSkill(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -402,7 +402,7 @@ func (h *AgentHandler) AddSkill(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSkill handles PATCH /projects/:projectId/agents/:agentId/skills/:skillId.
 func (h *AgentHandler) UpdateSkill(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -431,7 +431,7 @@ func (h *AgentHandler) UpdateSkill(w http.ResponseWriter, r *http.Request) {
 
 // DeleteSkill handles DELETE /projects/:projectId/agents/:agentId/skills/:skillId.
 func (h *AgentHandler) DeleteSkill(w http.ResponseWriter, r *http.Request) {
-	_, agentID, err := h.parseAgentForProject(w, r)
+	_, agentID, err := h.parseAgentForProject(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return

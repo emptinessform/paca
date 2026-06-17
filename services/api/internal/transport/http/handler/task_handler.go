@@ -112,7 +112,7 @@ func (h *TaskHandler) UpdateTaskType(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	typeID, err := parseTaskTypeID(w, r)
+	typeID, err := parseTaskTypeID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -143,7 +143,7 @@ func (h *TaskHandler) DeleteTaskType(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	typeID, err := parseTaskTypeID(w, r)
+	typeID, err := parseTaskTypeID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -162,7 +162,7 @@ func (h *TaskHandler) SetDefaultTaskType(w http.ResponseWriter, r *http.Request)
 		presenter.Error(w, r, err)
 		return
 	}
-	typeID, err := parseTaskTypeID(w, r)
+	typeID, err := parseTaskTypeID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -238,7 +238,7 @@ func (h *TaskHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	statusID, err := parseTaskStatusID(w, r)
+	statusID, err := parseTaskStatusID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -269,7 +269,7 @@ func (h *TaskHandler) DeleteTaskStatus(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	statusID, err := parseTaskStatusID(w, r)
+	statusID, err := parseTaskStatusID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -288,7 +288,7 @@ func (h *TaskHandler) SetDefaultTaskStatus(w http.ResponseWriter, r *http.Reques
 		presenter.Error(w, r, err)
 		return
 	}
-	statusID, err := parseTaskStatusID(w, r)
+	statusID, err := parseTaskStatusID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -533,7 +533,7 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -641,7 +641,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -878,7 +878,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -910,7 +910,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ----------------------------------------------------------------
 
-func parseTaskTypeID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseTaskTypeID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "typeId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid task type id")
@@ -918,7 +918,7 @@ func parseTaskTypeID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) 
 	return id, nil
 }
 
-func parseTaskStatusID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseTaskStatusID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "statusId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid task status id")
@@ -926,7 +926,7 @@ func parseTaskStatusID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error
 	return id, nil
 }
 
-func parseTaskID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseTaskID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "taskId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid task id")
@@ -982,7 +982,7 @@ func (h *TaskHandler) GetCustomFieldDefinition(w http.ResponseWriter, r *http.Re
 		presenter.Error(w, r, err)
 		return
 	}
-	fieldID, err := parseCustomFieldID(w, r)
+	fieldID, err := parseCustomFieldID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1038,7 +1038,7 @@ func (h *TaskHandler) UpdateCustomFieldDefinition(w http.ResponseWriter, r *http
 		presenter.Error(w, r, err)
 		return
 	}
-	fieldID, err := parseCustomFieldID(w, r)
+	fieldID, err := parseCustomFieldID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1069,7 +1069,7 @@ func (h *TaskHandler) DeleteCustomFieldDefinition(w http.ResponseWriter, r *http
 		presenter.Error(w, r, err)
 		return
 	}
-	fieldID, err := parseCustomFieldID(w, r)
+	fieldID, err := parseCustomFieldID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1081,7 +1081,7 @@ func (h *TaskHandler) DeleteCustomFieldDefinition(w http.ResponseWriter, r *http
 	presenter.OK(w, r, map[string]any{"message": "custom field deleted"})
 }
 
-func parseCustomFieldID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseCustomFieldID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "fieldId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid custom field id")
@@ -1092,7 +1092,7 @@ func parseCustomFieldID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, erro
 // --- Activities / Comments --------------------------------------------------
 
 // parseCommentID parses the :commentId path parameter.
-func parseCommentID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseCommentID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "commentId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid comment id")
@@ -1102,7 +1102,7 @@ func parseCommentID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
 
 // ListTaskActivities handles GET /projects/:projectId/tasks/:taskId/activities.
 func (h *TaskHandler) ListTaskActivities(w http.ResponseWriter, r *http.Request) {
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1127,7 +1127,7 @@ func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID, err := parseTaskID(w, r)
+	taskID, err := parseTaskID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1176,7 +1176,7 @@ func (h *TaskHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commentID, err := parseCommentID(w, r)
+	commentID, err := parseCommentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -1219,7 +1219,7 @@ func (h *TaskHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commentID, err := parseCommentID(w, r)
+	commentID, err := parseCommentID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return

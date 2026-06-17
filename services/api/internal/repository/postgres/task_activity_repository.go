@@ -79,9 +79,9 @@ const taskActivityJoinSQL = `
 	LEFT JOIN agents ag ON ag.id = pm.agent_id`
 
 // ListActivities returns all non-deleted activities for a task, oldest first.
-func (r *TaskActivityRepository) ListActivities(_ context.Context, taskID uuid.UUID) ([]*taskdom.Activity, error) {
+func (r *TaskActivityRepository) ListActivities(ctx context.Context, taskID uuid.UUID) ([]*taskdom.Activity, error) {
 	var records []taskActivityRecord
-	err := r.db.Select(&records, taskActivityJoinSQL+`
+	err := r.db.SelectContext(ctx, &records, taskActivityJoinSQL+`
 		WHERE ta.task_id = $1 AND ta.deleted_at IS NULL
 		ORDER BY ta.created_at ASC`, taskID.String())
 	if err != nil {
@@ -95,9 +95,9 @@ func (r *TaskActivityRepository) ListActivities(_ context.Context, taskID uuid.U
 }
 
 // FindActivityByID returns a single activity (including soft-deleted).
-func (r *TaskActivityRepository) FindActivityByID(_ context.Context, id uuid.UUID) (*taskdom.Activity, error) {
+func (r *TaskActivityRepository) FindActivityByID(ctx context.Context, id uuid.UUID) (*taskdom.Activity, error) {
 	var rec taskActivityRecord
-	err := r.db.Get(&rec, taskActivityJoinSQL+` WHERE ta.id = $1`, id.String())
+	err := r.db.GetContext(ctx, &rec, taskActivityJoinSQL+` WHERE ta.id = $1`, id.String())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, taskdom.ErrActivityNotFound
 	}

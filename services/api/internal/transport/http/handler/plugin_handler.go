@@ -217,7 +217,7 @@ func (h *PluginHandler) InstallMarketplacePlugin(w http.ResponseWriter, r *http.
 
 // UpdatePlugin handles PATCH /api/v1/admin/plugins/:pluginId.
 func (h *PluginHandler) UpdatePlugin(w http.ResponseWriter, r *http.Request) {
-	id, err := parsePluginID(w, r)
+	id, err := parsePluginID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -250,7 +250,7 @@ func (h *PluginHandler) UpgradeMarketplacePlugin(w http.ResponseWriter, r *http.
 		return
 	}
 
-	id, err := parsePluginID(w, r)
+	id, err := parsePluginID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -404,7 +404,7 @@ func (h *PluginHandler) UpgradeMarketplacePlugin(w http.ResponseWriter, r *http.
 
 // DeletePlugin handles DELETE /api/v1/admin/plugins/:pluginId.
 func (h *PluginHandler) DeletePlugin(w http.ResponseWriter, r *http.Request) {
-	id, err := parsePluginID(w, r)
+	id, err := parsePluginID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -911,7 +911,7 @@ func splitPathSegments(path string) []string {
 // Helpers
 // -------------------------------------------------------------------------
 
-func parsePluginID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parsePluginID(r *http.Request) (uuid.UUID, error) {
 	raw := chi.URLParam(r, "pluginId")
 	id, err := uuid.Parse(raw)
 	if err != nil {

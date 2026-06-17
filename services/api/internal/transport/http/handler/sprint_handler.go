@@ -116,7 +116,7 @@ func (h *SprintHandler) UpdateSprint(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	sprintID, err := parseSprintID(w, r)
+	sprintID, err := parseSprintID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -148,7 +148,7 @@ func (h *SprintHandler) DeleteSprint(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	sprintID, err := parseSprintID(w, r)
+	sprintID, err := parseSprintID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -169,7 +169,7 @@ func (h *SprintHandler) CompleteSprint(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	sprintID, err := parseSprintID(w, r)
+	sprintID, err := parseSprintID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -191,7 +191,7 @@ func (h *SprintHandler) CompleteSprint(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseSprintID extracts and validates the :sprintId path parameter.
-func parseSprintID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseSprintID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "sprintId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid sprint id")
@@ -206,7 +206,7 @@ func (h *SprintHandler) GetSprint(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	sprintID, err := parseSprintID(w, r)
+	sprintID, err := parseSprintID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return

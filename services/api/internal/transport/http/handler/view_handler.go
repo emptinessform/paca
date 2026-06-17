@@ -25,7 +25,7 @@ func NewViewHandler(svc sprintdom.ViewService) *ViewHandler {
 
 // viewContextFromQuery reads the ?context query param (sprint | backlog | timeline).
 // Returns an error for unknown values. Defaults to "sprint" when omitted.
-func viewContextFromQuery(_ http.ResponseWriter, r *http.Request) (sprintdom.ViewContext, error) {
+func viewContextFromQuery(r *http.Request) (sprintdom.ViewContext, error) {
 	raw := defaultQuery(r, "context", string(sprintdom.ViewContextSprint))
 	vc := sprintdom.ViewContext(raw)
 	switch vc {
@@ -52,7 +52,7 @@ func parseQueryUUID(r *http.Request, param string) (uuid.UUID, error) {
 // ListViews handles GET /projects/:projectId/views?context=sprint|backlog|timeline.
 // Sprint context additionally requires ?sprint_id=<uuid>.
 func (h *ViewHandler) ListViews(w http.ResponseWriter, r *http.Request) {
-	viewCtx, err := viewContextFromQuery(w, r)
+	viewCtx, err := viewContextFromQuery(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -93,7 +93,7 @@ func (h *ViewHandler) GetView(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -109,7 +109,7 @@ func (h *ViewHandler) GetView(w http.ResponseWriter, r *http.Request) {
 // CreateView handles POST /projects/:projectId/views?context=sprint|backlog|timeline.
 // Sprint context additionally requires ?sprint_id=<uuid>.
 func (h *ViewHandler) CreateView(w http.ResponseWriter, r *http.Request) {
-	viewCtx, err := viewContextFromQuery(w, r)
+	viewCtx, err := viewContextFromQuery(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -156,7 +156,7 @@ func (h *ViewHandler) UpdateView(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -182,7 +182,7 @@ func (h *ViewHandler) DeleteView(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -201,7 +201,7 @@ func (h *ViewHandler) ListTaskPositions(w http.ResponseWriter, r *http.Request) 
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -225,7 +225,7 @@ func (h *ViewHandler) MoveTask(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -261,7 +261,7 @@ func (h *ViewHandler) BulkMoveTasks(w http.ResponseWriter, r *http.Request) {
 		presenter.Error(w, r, err)
 		return
 	}
-	viewID, err := parseViewID(w, r)
+	viewID, err := parseViewID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -293,7 +293,7 @@ func (h *ViewHandler) BulkMoveTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseViewID extracts and validates the :viewId path parameter.
-func parseViewID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseViewID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "viewId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid view id")
@@ -313,7 +313,7 @@ func parseTaskIDParam(r *http.Request, param string) (uuid.UUID, error) {
 // ReorderViews handles PUT /projects/:projectId/views/positions?context=sprint|backlog|timeline.
 // Sprint context additionally requires ?sprint_id=<uuid>.
 func (h *ViewHandler) ReorderViews(w http.ResponseWriter, r *http.Request) {
-	viewCtx, err := viewContextFromQuery(w, r)
+	viewCtx, err := viewContextFromQuery(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return

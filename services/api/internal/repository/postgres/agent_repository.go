@@ -230,28 +230,32 @@ func (r *AgentRepository) CreateAgent(ctx context.Context, a *agentdom.Agent) er
 }
 
 // UpdateAgent patches the mutable fields of an existing agent.
+// When LLMAPIKeySecret is non-empty it is updated atomically with the rest of
+// the fields inside a single transaction so no partial update is possible.
 func (r *AgentRepository) UpdateAgent(ctx context.Context, a *agentdom.Agent) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE agents SET
-		  name=$1, handle=$2, avatar_url=$3, llm_provider=$4, llm_model=$5, llm_base_url=$6,
-		  system_prompt=$7, task_trigger_prompt=$8, doc_comment_trigger_prompt=$9,
-		  chat_trigger_prompt=$10, description_write_trigger_prompt=$11,
-		  can_clone_repos=$12, can_create_prs=$13, max_iterations=$14, timeout_minutes=$15,
-		  git_committer_name=$16, git_committer_email=$17, updated_at=$18
-		WHERE id=$19`,
-		a.Name, a.Handle, a.AvatarURL, a.LLMProvider, a.LLMModel, a.LLMBaseURL,
-		a.SystemPrompt, a.TaskTriggerPrompt, a.DocCommentTriggerPrompt,
-		a.ChatTriggerPrompt, a.DescriptionWriteTriggerPrompt,
-		a.CanCloneRepos, a.CanCreatePRs, a.MaxIterations, a.TimeoutMinutes,
-		a.GitCommitterName, a.GitCommitterEmail, time.Now(), a.ID.String(),
-	)
-	if err != nil {
+	return WithTx(ctx, r.db, func(tx *sqlx.Tx) error {
+		_, err := tx.ExecContext(ctx, `
+			UPDATE agents SET
+			  name=$1, handle=$2, avatar_url=$3, llm_provider=$4, llm_model=$5, llm_base_url=$6,
+			  system_prompt=$7, task_trigger_prompt=$8, doc_comment_trigger_prompt=$9,
+			  chat_trigger_prompt=$10, description_write_trigger_prompt=$11,
+			  can_clone_repos=$12, can_create_prs=$13, max_iterations=$14, timeout_minutes=$15,
+			  git_committer_name=$16, git_committer_email=$17, updated_at=$18
+			WHERE id=$19`,
+			a.Name, a.Handle, a.AvatarURL, a.LLMProvider, a.LLMModel, a.LLMBaseURL,
+			a.SystemPrompt, a.TaskTriggerPrompt, a.DocCommentTriggerPrompt,
+			a.ChatTriggerPrompt, a.DescriptionWriteTriggerPrompt,
+			a.CanCloneRepos, a.CanCreatePRs, a.MaxIterations, a.TimeoutMinutes,
+			a.GitCommitterName, a.GitCommitterEmail, time.Now(), a.ID.String(),
+		)
+		if err != nil {
+			return err
+		}
+		if a.LLMAPIKeySecret != "" {
+			_, err = tx.ExecContext(ctx, `UPDATE agents SET llm_api_key_secret=$1 WHERE id=$2`, a.LLMAPIKeySecret, a.ID.String())
+		}
 		return err
-	}
-	if a.LLMAPIKeySecret != "" {
-		_, err = r.db.ExecContext(ctx, `UPDATE agents SET llm_api_key_secret=$1 WHERE id=$2`, a.LLMAPIKeySecret, a.ID.String())
-	}
-	return err
+	})
 }
 
 // SoftDeleteAgent sets deleted_at on the agent row.

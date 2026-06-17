@@ -28,41 +28,41 @@ type docFolderRecord struct {
 }
 
 type documentRecord struct {
-	ID        string          `db:"id"`
-	ProjectID string          `db:"project_id"`
-	FolderID  *string         `db:"folder_id"`
-	Title     string          `db:"title"`
-	Content   json.RawMessage `db:"content"`
-	Position  int             `db:"position"`
-	CreatedBy *string         `db:"created_by"`
-	UpdatedBy *string         `db:"updated_by"`
-	CreatedAt time.Time       `db:"created_at"`
-	UpdatedAt time.Time       `db:"updated_at"`
-	DeletedAt *time.Time      `db:"deleted_at"`
+	ID        string           `db:"id"`
+	ProjectID string           `db:"project_id"`
+	FolderID  *string          `db:"folder_id"`
+	Title     string           `db:"title"`
+	Content   *json.RawMessage `db:"content"`
+	Position  int              `db:"position"`
+	CreatedBy *string          `db:"created_by"`
+	UpdatedBy *string          `db:"updated_by"`
+	CreatedAt time.Time        `db:"created_at"`
+	UpdatedAt time.Time        `db:"updated_at"`
+	DeletedAt *time.Time       `db:"deleted_at"`
 }
 
 type docSnapshotRecord struct {
-	ID             string          `db:"id"`
-	DocumentID     string          `db:"document_id"`
-	Title          string          `db:"title"`
-	Content        json.RawMessage `db:"content"`
-	SnapshotNumber int64           `db:"snapshot_number"`
-	CreatedBy      *string         `db:"created_by"`
-	CreatedAt      time.Time       `db:"created_at"`
+	ID             string           `db:"id"`
+	DocumentID     string           `db:"document_id"`
+	Title          string           `db:"title"`
+	Content        *json.RawMessage `db:"content"`
+	SnapshotNumber int64            `db:"snapshot_number"`
+	CreatedBy      *string          `db:"created_by"`
+	CreatedAt      time.Time        `db:"created_at"`
 
 	// Joined from project_members → users.
 	CreatedByName *string `db:"created_by_name"`
 }
 
 type docActivityRecord struct {
-	ID           string          `db:"id"`
-	DocumentID   string          `db:"document_id"`
-	ActorID      *string         `db:"actor_id"`
-	ActivityType string          `db:"activity_type"`
-	Content      json.RawMessage `db:"content"`
-	CreatedAt    time.Time       `db:"created_at"`
-	UpdatedAt    time.Time       `db:"updated_at"`
-	DeletedAt    *time.Time      `db:"deleted_at"`
+	ID           string           `db:"id"`
+	DocumentID   string           `db:"document_id"`
+	ActorID      *string          `db:"actor_id"`
+	ActivityType string           `db:"activity_type"`
+	Content      *json.RawMessage `db:"content"`
+	CreatedAt    time.Time        `db:"created_at"`
+	UpdatedAt    time.Time        `db:"updated_at"`
+	DeletedAt    *time.Time       `db:"deleted_at"`
 
 	// Joined from project_members + users.
 	ActorFullName *string `db:"actor_full_name"`
@@ -132,11 +132,13 @@ func documentFromRecord(r documentRecord) *docdom.Document {
 		ID:        uuid.MustParse(r.ID),
 		ProjectID: uuid.MustParse(r.ProjectID),
 		Title:     r.Title,
-		Content:   r.Content,
 		Position:  r.Position,
 		CreatedAt: r.CreatedAt,
 		UpdatedAt: r.UpdatedAt,
 		DeletedAt: r.DeletedAt,
+	}
+	if r.Content != nil {
+		d.Content = *r.Content
 	}
 	if r.FolderID != nil {
 		id := uuid.MustParse(*r.FolderID)
@@ -158,11 +160,13 @@ func documentToRecord(d *docdom.Document) documentRecord {
 		ID:        d.ID.String(),
 		ProjectID: d.ProjectID.String(),
 		Title:     d.Title,
-		Content:   d.Content,
 		Position:  d.Position,
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,
 		DeletedAt: d.DeletedAt,
+	}
+	if d.Content != nil {
+		r.Content = &d.Content
 	}
 	if d.FolderID != nil {
 		s := d.FolderID.String()
@@ -184,9 +188,11 @@ func snapshotFromRecord(r docSnapshotRecord) *docdom.DocSnapshot {
 		ID:             uuid.MustParse(r.ID),
 		DocumentID:     uuid.MustParse(r.DocumentID),
 		Title:          r.Title,
-		Content:        r.Content,
 		SnapshotNumber: r.SnapshotNumber,
 		CreatedAt:      r.CreatedAt,
+	}
+	if r.Content != nil {
+		s.Content = *r.Content
 	}
 	if r.CreatedBy != nil {
 		id := uuid.MustParse(*r.CreatedBy)
@@ -203,10 +209,12 @@ func activityFromDocRecord(r docActivityRecord) *docdom.Activity {
 		ID:           uuid.MustParse(r.ID),
 		DocumentID:   uuid.MustParse(r.DocumentID),
 		ActivityType: docdom.ActivityType(r.ActivityType),
-		Content:      r.Content,
 		CreatedAt:    r.CreatedAt,
 		UpdatedAt:    r.UpdatedAt,
 		DeletedAt:    r.DeletedAt,
+	}
+	if r.Content != nil {
+		a.Content = *r.Content
 	}
 	if r.ActorID != nil {
 		id := uuid.MustParse(*r.ActorID)

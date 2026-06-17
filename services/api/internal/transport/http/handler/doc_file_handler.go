@@ -27,7 +27,7 @@ func NewDocFileHandler(svc attachmentdom.DocFileService) *DocFileHandler {
 // InitiateDocUpload handles POST /projects/:projectId/docs/:docId/files/initiate-upload.
 // Creates a pending file record and returns presigned upload URL(s).
 func (h *DocFileHandler) InitiateDocUpload(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -96,12 +96,12 @@ func (h *DocFileHandler) CompleteDocUpload(w http.ResponseWriter, r *http.Reques
 // GetDocFileDownloadURL handles GET /projects/:projectId/docs/:docId/files/:fileId/download-url.
 // Returns a short-lived presigned URL valid for 15 minutes.
 func (h *DocFileHandler) GetDocFileDownloadURL(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
 	}
-	fileID, err := parseDocFileID(w, r)
+	fileID, err := parseDocFileID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -118,12 +118,12 @@ func (h *DocFileHandler) GetDocFileDownloadURL(w http.ResponseWriter, r *http.Re
 
 // DeleteDocFile handles DELETE /projects/:projectId/docs/:docId/files/:fileId.
 func (h *DocFileHandler) DeleteDocFile(w http.ResponseWriter, r *http.Request) {
-	docID, err := parseDocID(w, r)
+	docID, err := parseDocID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
 	}
-	fileID, err := parseDocFileID(w, r)
+	fileID, err := parseDocFileID(r)
 	if err != nil {
 		presenter.Error(w, r, err)
 		return
@@ -139,7 +139,7 @@ func (h *DocFileHandler) DeleteDocFile(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ----------------------------------------------------------------
 
-func parseDocFileID(_ http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+func parseDocFileID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "fileId"))
 	if err != nil {
 		return uuid.Nil, apierr.New(apierr.CodeBadRequest, "invalid file id")
