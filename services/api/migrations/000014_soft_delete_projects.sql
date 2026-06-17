@@ -1,5 +1,5 @@
 -- 000014_soft_delete_projects.sql
--- Converts projects from hard-delete to soft-delete.
+-- Adds deleted_at to projects, converting hard-delete to soft-delete.
 
 BEGIN;
 
