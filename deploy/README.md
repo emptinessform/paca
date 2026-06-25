@@ -212,6 +212,69 @@ PACA_REALTIME_IMAGE=pacaai/paca-realtime:1.2.3
 PACA_AI_AGENT_IMAGE=pacaai/paca-ai-agent:1.2.3
 ```
 
+### Database backups
+
+A `db-backup` container runs alongside the stack and writes a gzip-compressed
+`pg_dump` on a cron schedule you control, pruning dumps older than the
+configured retention period. It works against the bundled `postgres` container
+or an external `DATABASE_URL`.
+
+Configure it in `.env`:
+
+```bash
+BACKUP_ENABLED=true             # set to false to turn off backups permanently
+BACKUP_DIR=./backups            # host directory dumps are written to
+BACKUP_CRON=0 2 * * *           # standard 5-field cron syntax, default 02:00 daily
+BACKUP_RETENTION_DAYS=7         # dumps older than this are deleted
+# TZ=America/New_York           # interpret BACKUP_CRON in this zone instead of UTC
+```
+
+`BACKUP_DIR` is bind-mounted into the container, so it must be a path (relative
+to wherever you run `docker compose`, or absolute) — not a bare name.
+`BACKUP_CRON` accepts any standard cron expression, e.g. `*/30 * * * *` (every
+30 minutes) or `0 2 * * 0` (weekly, Sunday at 02:00). The install script prompts
+for all four; existing installs get them backfilled by `upgrade.sh` with these
+same defaults.
+
+`BACKUP_ENABLED` is the persisted record of whether the service should run at
+all — `--scale db-backup=0` only suppresses it for a single `up` invocation,
+so `upgrade.sh` reads `BACKUP_ENABLED` back on every upgrade to decide whether
+to re-apply that scale flag automatically, rather than guessing from
+`DATABASE_URL` alone. Set it (not just the scale flag) if you want a "no" to
+backups during install to stay a "no" on every future upgrade.
+
+Scheduling is handled by `crond` inside the container, which blocks until the
+next due minute rather than polling, and the container is capped at 0.5 CPU /
+256MB (see `deploy.resources.limits` on the service) — so it stays effectively
+idle (well under 1MB RSS, 0% CPU observed) between runs and can't compete for
+host resources during the brief dump window either. Raise the memory limit in
+`docker-compose.yml` directly if you have an unusually large database.
+
+Dumps are written by the container's root user, so deleting or moving them
+directly on the host may require `sudo`.
+
+**Restore** (bundled PostgreSQL container):
+
+```bash
+gunzip -c backups/paca-<timestamp>.sql.gz | docker compose exec -T postgres psql -U ${POSTGRES_USER:-paca} -d ${POSTGRES_DB:-paca}
+```
+
+**Restore** (external PostgreSQL, using `DATABASE_URL`):
+
+```bash
+gunzip -c backups/paca-<timestamp>.sql.gz | psql "$DATABASE_URL"
+```
+
+Disable automated backups (e.g. if a managed database already handles this):
+
+```bash
+docker compose --env-file .env up -d --scale db-backup=0
+```
+
+To keep it disabled across future `upgrade.sh` runs as well, also set
+`BACKUP_ENABLED=false` in `.env` — otherwise `upgrade.sh` has no record of the
+choice and may re-enable it on the next upgrade.
+
 ## Development Compose
 
 Use [`docker-compose.dev.yml`](./docker-compose.dev.yml) for local development and contributor onboarding.
@@ -252,6 +315,44 @@ and use Docker Compose only for PostgreSQL and Valkey.
 | Web | 3000 (internal) | Routed via gateway at `/` |
 | MinIO S3 API | 9000 | Local object store (S3-compatible) |
 | MinIO Console | 9001 | MinIO web UI (credentials: `minioadmin` / `minioadmin`) |
+
+### Database backups (dev)
+
+`docker-compose.dev.yml` includes the same `db-backup` service as production
+(see [Database backups](#database-backups) above), pointed at the local
+`postgres` container by default. It starts automatically with the rest of the
+stack and writes dumps to `deploy/backups/`.
+
+To test it without waiting for the cron schedule, trigger a dump on demand:
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml exec db-backup run-backup.sh
+ls deploy/backups/
+```
+
+To test retention pruning, backdate a dummy file past the retention window
+and re-run the script:
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml exec db-backup \
+  sh -c 'touch -t "$(date -d "@$(($(date +%s)-10*86400))" +%Y%m%d%H%M)" /backups/paca-fake.sql.gz'
+docker compose -f deploy/docker-compose.dev.yml exec db-backup run-backup.sh
+ls deploy/backups/   # paca-fake.sql.gz should be gone
+```
+
+To watch the cron schedule itself fire, override `BACKUP_CRON` in
+`deploy/.env.dev` (e.g. `*/2 * * * *` for every 2 minutes) and tail the logs:
+
+```bash
+docker compose --env-file deploy/.env.dev -f deploy/docker-compose.dev.yml up -d db-backup
+docker compose -f deploy/docker-compose.dev.yml logs -f db-backup
+```
+
+Restore a dump into the local dev database:
+
+```bash
+gunzip -c deploy/backups/paca-<timestamp>.sql.gz | docker compose -f deploy/docker-compose.dev.yml exec -T postgres psql -U paca -d paca
+```
 
 Stop the development stack:
 
