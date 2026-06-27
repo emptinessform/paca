@@ -379,6 +379,18 @@ export async function setDefaultTaskStatus(
 	return data.data;
 }
 
+/** Persists a new display order for task statuses by updating each one's position. */
+export async function reorderTaskStatuses(
+	projectId: string,
+	orderedStatuses: { id: string; position: number }[],
+): Promise<void> {
+	await Promise.all(
+		orderedStatuses.map(({ id, position }) =>
+			updateTaskStatus(projectId, id, { position }),
+		),
+	);
+}
+
 // ── Custom Field Definitions ─────────────────────────────────────────────────
 
 export type FieldType =

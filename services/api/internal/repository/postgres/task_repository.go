@@ -313,8 +313,8 @@ func (r *TaskRepository) CreateTaskStatus(ctx context.Context, s *taskdom.TaskSt
 // UpdateTaskStatus persists changes to an existing task status.
 func (r *TaskRepository) UpdateTaskStatus(ctx context.Context, s *taskdom.TaskStatus) error {
 	_, err := r.db.ExecContext(ctx, `
-		UPDATE task_statuses SET name=$1, color=$2, category=$3, updated_at=$4 WHERE id=$5`,
-		s.Name, s.Color, string(s.Category), s.UpdatedAt, s.ID.String(),
+		UPDATE task_statuses SET name=$1, color=$2, category=$3, position=$4, updated_at=$5 WHERE id=$6`,
+		s.Name, s.Color, string(s.Category), s.Position, s.UpdatedAt, s.ID.String(),
 	)
 	if err != nil {
 		return fmt.Errorf("task status repo: update: %w", err)

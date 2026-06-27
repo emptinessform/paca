@@ -168,7 +168,9 @@ func (s *Service) UpdateTaskStatus(ctx context.Context, projectID, id uuid.UUID,
 	if name := strings.TrimSpace(in.Name); name != "" {
 		st.Name = name
 	}
-	st.Color = in.Color
+	if in.Color != nil {
+		st.Color = in.Color
+	}
 	if in.Position != nil {
 		st.Position = *in.Position
 	}
