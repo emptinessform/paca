@@ -352,6 +352,7 @@ func httpStatusForCode(code apierr.Code) int {
 		apierr.CodeTaskTypeNameInvalid,
 		apierr.CodeTaskStatusNameInvalid,
 		apierr.CodeTaskStatusCategoryInvalid,
+		apierr.CodeTaskStatusReorderInvalid,
 		apierr.CodeSprintNameInvalid,
 		apierr.CodeSprintStatusInvalid,
 		apierr.CodeViewNameInvalid,
