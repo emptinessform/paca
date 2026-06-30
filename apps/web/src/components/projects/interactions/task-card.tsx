@@ -14,6 +14,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatDate } from "@/lib/format-date";
 import type { Task } from "@/lib/interaction-api";
 import type {
 	CustomFieldDefinition,
@@ -47,13 +48,6 @@ interface TaskCardProps {
 	isDragging?: boolean;
 	canEdit?: boolean;
 	onUpdate?: (taskId: string, payload: UpdatePayload) => void;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export function TaskCard({
@@ -424,7 +418,7 @@ export function TaskCard({
 						key="start_date"
 						className="text-xs text-muted-foreground/70 shrink-0"
 					>
-						{formatDate(task.start_date)}
+						{formatDate(task.start_date, { month: "short", day: "numeric" })}
 					</span>
 				) : null;
 
@@ -434,7 +428,7 @@ export function TaskCard({
 						key="due_date"
 						className="text-xs text-muted-foreground/70 shrink-0"
 					>
-						{formatDate(task.due_date)}
+						{formatDate(task.due_date, { month: "short", day: "numeric" })}
 					</span>
 				) : null;
 
@@ -444,7 +438,7 @@ export function TaskCard({
 						key="created"
 						className="text-xs text-muted-foreground/50 shrink-0"
 					>
-						{formatDate(task.created_at)}
+						{formatDate(task.created_at, { month: "short", day: "numeric" })}
 					</span>
 				);
 
@@ -553,7 +547,7 @@ export function TaskCard({
 								key={fieldKey}
 								className="text-xs text-muted-foreground/70 shrink-0"
 							>
-								{formatDate(String(val))}
+								{formatDate(String(val), { month: "short", day: "numeric" })}
 							</span>
 						);
 					case "select":

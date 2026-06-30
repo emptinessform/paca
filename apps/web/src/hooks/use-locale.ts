@@ -1,21 +1,18 @@
 import { useEffect, useState } from "react";
-import i18n, { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
+import i18n, {
+	LOCALE_LABELS,
+	SUPPORTED_LANGUAGES,
+	type SupportedLanguage,
+} from "@/i18n";
 
 export interface LocaleOption {
 	code: SupportedLanguage;
-	label: string;
 	nativeLabel: string;
 }
 
-export const SUPPORTED_LOCALES: LocaleOption[] = [
-	{ code: "en", label: "English", nativeLabel: "English" },
-	{ code: "vi", label: "Vietnamese", nativeLabel: "Tiếng Việt" },
-	{ code: "ko", label: "Korean", nativeLabel: "한국어" },
-	{ code: "zh-CN", label: "Chinese (Simplified)", nativeLabel: "简体中文" },
-	{ code: "ja", label: "Japanese", nativeLabel: "日本語" },
-	{ code: "es", label: "Spanish", nativeLabel: "Español" },
-	{ code: "fr", label: "French", nativeLabel: "Français" },
-];
+export const SUPPORTED_LOCALES: LocaleOption[] = SUPPORTED_LANGUAGES.map(
+	(code) => ({ code, nativeLabel: LOCALE_LABELS[code] }),
+);
 
 function resolveLocale(language: string): SupportedLanguage {
 	const exact = SUPPORTED_LANGUAGES.find((code) => code === language);

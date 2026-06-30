@@ -1,14 +1,12 @@
 import { Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { LocaleRadioGroup } from "@/components/LocaleRadioGroup";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLocale } from "@/hooks/use-locale";
-import type { SupportedLanguage } from "@/i18n";
 
 export default function LanguageToggle() {
 	const { t } = useTranslation("appShell");
@@ -31,16 +29,7 @@ export default function LanguageToggle() {
 				{current.code.toUpperCase()}
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" side="bottom" className="w-48">
-				<DropdownMenuRadioGroup
-					value={locale}
-					onValueChange={(value) => set(value as SupportedLanguage)}
-				>
-					{supportedLocales.map((option) => (
-						<DropdownMenuRadioItem key={option.code} value={option.code}>
-							{option.nativeLabel}
-						</DropdownMenuRadioItem>
-					))}
-				</DropdownMenuRadioGroup>
+				<LocaleRadioGroup value={locale} onValueChange={set} />
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

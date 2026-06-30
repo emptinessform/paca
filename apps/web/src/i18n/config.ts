@@ -1,6 +1,7 @@
 import i18next from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
+import { onStorageKeyChange } from "@/lib/storage-sync";
 
 export const SUPPORTED_LANGUAGES = [
 	"en",
@@ -13,6 +14,16 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+export const LOCALE_LABELS: Record<SupportedLanguage, string> = {
+	en: "English",
+	vi: "Tiếng Việt",
+	ko: "한국어",
+	"zh-CN": "简体中文",
+	ja: "日本語",
+	es: "Español",
+	fr: "Français",
+};
 
 export const LOCALE_STORAGE_KEY = "locale";
 
@@ -49,12 +60,8 @@ i18next
 	});
 
 if (typeof window !== "undefined") {
-	window.addEventListener("storage", (event) => {
-		if (
-			event.key === LOCALE_STORAGE_KEY &&
-			event.newValue &&
-			event.newValue !== i18next.language
-		) {
+	onStorageKeyChange(LOCALE_STORAGE_KEY, (event) => {
+		if (event.newValue && event.newValue !== i18next.language) {
 			void i18next.changeLanguage(event.newValue);
 		}
 	});

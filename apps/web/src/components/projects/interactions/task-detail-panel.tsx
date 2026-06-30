@@ -7,6 +7,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { formatDate } from "@/lib/format-date";
 import type { Task } from "@/lib/interaction-api";
 import type { TaskStatus, TaskType } from "@/lib/project-api";
 
@@ -147,7 +148,7 @@ export function TaskDetailPanel({
 											{t("taskDetail.panel.created")}
 										</span>
 										<span className="text-sm font-medium text-muted-foreground">
-											{new Date(task.created_at).toLocaleDateString(undefined, {
+											{formatDate(task.created_at, {
 												year: "numeric",
 												month: "short",
 												day: "numeric",
@@ -162,7 +163,7 @@ export function TaskDetailPanel({
 											{t("taskDetail.panel.updated")}
 										</span>
 										<span className="text-sm font-medium text-muted-foreground">
-											{new Date(task.updated_at).toLocaleDateString(undefined, {
+											{formatDate(task.updated_at, {
 												year: "numeric",
 												month: "short",
 												day: "numeric",

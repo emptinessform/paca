@@ -36,6 +36,7 @@ import {
 	createAPIKey,
 	revokeAPIKey,
 } from "@/lib/apikey-api";
+import { formatDate as formatDateLocale } from "@/lib/format-date";
 
 export const Route = createFileRoute("/_authenticated/profile/api-keys")({
 	component: APIKeysPage,
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/profile/api-keys")({
 
 function formatDate(iso: string | null): string {
 	if (!iso) return "—";
-	return new Date(iso).toLocaleDateString("en-US", {
+	return formatDateLocale(iso, {
 		year: "numeric",
 		month: "short",
 		day: "numeric",

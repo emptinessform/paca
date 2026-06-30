@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { InteractionLayout } from "@/components/projects/interactions/interaction-layout";
 import { useProjectPermissions } from "@/hooks/use-project-permissions";
+import { formatDate } from "@/lib/format-date";
 import {
 	completeSprint,
 	sprintQueryOptions,
@@ -127,7 +128,7 @@ function SprintPage() {
 						: sprint.start_date
 							? t("layout.sprintDetail.descriptionWithStartDate", {
 									status: statusBadge,
-									date: new Date(sprint.start_date).toLocaleDateString(),
+									date: formatDate(sprint.start_date),
 								})
 							: t("layout.sprintDetail.description", { status: statusBadge })
 				}

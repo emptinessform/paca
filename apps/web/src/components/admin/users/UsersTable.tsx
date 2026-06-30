@@ -11,9 +11,10 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { User } from "@/lib/admin-api";
+import { formatDate as formatDateLocale } from "@/lib/format-date";
 
 function formatDate(iso: string): string {
-	return new Date(iso).toLocaleDateString(undefined, {
+	return formatDateLocale(iso, {
 		year: "numeric",
 		month: "short",
 		day: "numeric",

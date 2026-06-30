@@ -4,6 +4,7 @@ import { ChevronsUpDown, Key, Languages, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LocaleRadioGroup } from "@/components/LocaleRadioGroup";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -11,8 +12,6 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
@@ -25,7 +24,6 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useLocale } from "@/hooks/use-locale";
-import type { SupportedLanguage } from "@/i18n";
 import { currentUserOptionalQueryOptions, logout } from "@/lib/auth-api";
 
 function getInitials(name: string): string {
@@ -44,7 +42,7 @@ export function UserMenu() {
 	const queryClient = useQueryClient();
 	const { data: user } = useQuery(currentUserOptionalQueryOptions);
 	const [isLoggingOut, setIsLoggingOut] = useState(false);
-	const { locale, set: setLocale, supportedLocales } = useLocale();
+	const { locale, set: setLocale } = useLocale();
 
 	if (!user) {
 		return (
@@ -143,21 +141,7 @@ export function UserMenu() {
 								{t("language.label")}
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
-								<DropdownMenuRadioGroup
-									value={locale}
-									onValueChange={(value) =>
-										setLocale(value as SupportedLanguage)
-									}
-								>
-									{supportedLocales.map((option) => (
-										<DropdownMenuRadioItem
-											key={option.code}
-											value={option.code}
-										>
-											{option.nativeLabel}
-										</DropdownMenuRadioItem>
-									))}
-								</DropdownMenuRadioGroup>
+								<LocaleRadioGroup value={locale} onValueChange={setLocale} />
 							</DropdownMenuSubContent>
 						</DropdownMenuSub>
 						<DropdownMenuSeparator />

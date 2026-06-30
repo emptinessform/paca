@@ -14,6 +14,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatDate as formatDateLocale } from "@/lib/format-date";
 import { type ProjectRole, projectRolesQueryOptions } from "@/lib/project-api";
 
 function activePermissions(perms: Record<string, unknown>): string[] {
@@ -23,7 +24,7 @@ function activePermissions(perms: Record<string, unknown>): string[] {
 }
 
 function formatDate(iso: string) {
-	return new Date(iso).toLocaleDateString("en-US", {
+	return formatDateLocale(iso, {
 		year: "numeric",
 		month: "short",
 		day: "numeric",

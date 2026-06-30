@@ -13,6 +13,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatDate } from "@/lib/format-date";
 import type { Task } from "@/lib/interaction-api";
 import type {
 	CustomFieldDefinition,
@@ -118,11 +119,6 @@ export function getRowColConfig(
 			};
 		}
 	}
-}
-
-function formatDate(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -484,7 +480,12 @@ export function TaskRow({
 						className={cn(col.className, responsiveClass, "items-center")}
 					>
 						<span className="text-xs text-muted-foreground/70 truncate">
-							{task.start_date ? formatDate(task.start_date) : "—"}
+							{task.start_date
+								? formatDate(task.start_date, {
+										month: "short",
+										day: "numeric",
+									})
+								: "—"}
 						</span>
 					</div>
 				);
@@ -496,7 +497,9 @@ export function TaskRow({
 						className={cn(col.className, responsiveClass, "items-center")}
 					>
 						<span className="text-xs text-muted-foreground/70 truncate">
-							{task.due_date ? formatDate(task.due_date) : "—"}
+							{task.due_date
+								? formatDate(task.due_date, { month: "short", day: "numeric" })
+								: "—"}
 						</span>
 					</div>
 				);
@@ -528,7 +531,7 @@ export function TaskRow({
 						className={cn(col.className, responsiveClass, "items-center")}
 					>
 						<span className="text-xs text-muted-foreground/50 truncate">
-							{formatDate(task.created_at)}
+							{formatDate(task.created_at, { month: "short", day: "numeric" })}
 						</span>
 					</div>
 				);
@@ -638,7 +641,7 @@ export function TaskRow({
 						case "date":
 							return (
 								<span className="text-xs text-muted-foreground/70">
-									{formatDate(String(val))}
+									{formatDate(String(val), { month: "short", day: "numeric" })}
 								</span>
 							);
 						case "select":
