@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인간–AI 협업 시대의 소프트웨어 개발 방법론 정립 — 기술 백서</title>
+<style>
+  /* ============================================================
+     디자인 토큰 (다크/라이트 공용) — 외부 의존성 0
+     ============================================================ */
+  :root{
+    --bg: #f7f8fa;
+    --bg-elev: #ffffff;
+    --bg-soft: #eef1f6;
+    --fg: #1c2330;
+    --fg-soft: #4a5468;
+    --fg-mute: #7a8499;
+    --line: #dde2eb;
+    --line-soft: #e8ecf3;
+    --accent: #3b5bdb;
+    --accent-2: #0c8599;
+    --accent-3: #6741d9;
+    --warn: #b8860b;
+    --good: #2b8a3e;
+    --bad: #c92a2a;
+    --code-bg: #f1f3f8;
+    --shadow: 0 1px 2px rgba(20,30,50,.06), 0 8px 24px rgba(20,30,50,.06);
+    --radius: 14px;
+    --maxw: 880px;
+    --sidew: 300px;
+    --serif: "Iowan Old Style", "Apple Garamond", Georgia, "Noto Serif KR", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", "Noto Sans KR", sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  html[data-theme="dark"]{
+    --bg: #0e1116;
+    --bg-elev: #161b22;
+    --bg-soft: #1b2230;
+    --fg: #e6eaf2;
+    --fg-soft: #b3bcce;
+    --fg-mute: #7c879b;
+    --line: #2a3240;
+    --line-soft: #222a36;
+    --accent: #748ffc;
+    --accent-2: #3bc9db;
+    --accent-3: #b197fc;
+    --warn: #ffd43b;
+    --good: #69db7c;
+    --bad: #ff8787;
+    --code-bg: #1b2230;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 30px rgba(0,0,0,.35);
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:var(--sans); font-size:16.5px; line-height:1.72;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+
+  /* 상단 읽기 진행 바 */
+  #progress{ position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2)); z-index:120; transition:width .1s linear; }
+
+  /* 레이아웃 */
+  .wrap{ display:grid; grid-template-columns: var(--sidew) 1fr; gap:0; max-width:1320px; margin:0 auto; }
+  nav.toc{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:28px 20px 60px 28px; border-right:1px solid var(--line); background:var(--bg);
+  }
+  main{ padding:0 clamp(20px,5vw,72px) 120px; min-width:0; }
+  .content{ max-width:var(--maxw); margin:0 auto; }
+
+  /* TOC */
+  .toc .brand{ font-weight:800; font-size:15px; letter-spacing:.2px; margin-bottom:4px; color:var(--fg); }
+  .toc .brand small{ display:block; font-weight:500; color:var(--fg-mute); font-size:12px; margin-top:3px; letter-spacing:0; }
+  .toc ul{ list-style:none; padding:0; margin:18px 0 0; }
+  .toc li{ margin:1px 0; }
+  .toc a{ display:block; text-decoration:none; color:var(--fg-soft); font-size:13.5px;
+    padding:5px 10px; border-radius:8px; border-left:2px solid transparent; line-height:1.45; transition:all .15s; }
+  .toc a:hover{ background:var(--bg-soft); color:var(--fg); }
+  .toc a.sub{ padding-left:22px; font-size:12.5px; color:var(--fg-mute); }
+  .toc a.active{ color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent); border-left-color:var(--accent); font-weight:600; }
+  .toc .grp{ font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--fg-mute); margin:18px 10px 6px; font-weight:700; }
+
+  /* 헤더 / 히어로 */
+  header.hero{ padding:60px 0 30px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+  .eyebrow{ display:inline-block; font-size:12.5px; letter-spacing:.16em; text-transform:uppercase; font-weight:700;
+    color:var(--accent); background:color-mix(in srgb,var(--accent) 10%, transparent); padding:5px 12px; border-radius:999px; }
+  h1{ font-size:clamp(28px,4.4vw,42px); line-height:1.2; letter-spacing:-.01em; margin:18px 0 10px; font-weight:800; }
+  .subtitle{ font-size:18px; color:var(--fg-soft); max-width:720px; margin:0 0 22px; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap:10px 22px; font-size:13.5px; color:var(--fg-mute); padding-top:8px; }
+  .meta-row b{ color:var(--fg-soft); font-weight:600; }
+
+  /* 섹션 / 타이포 */
+  section{ padding-top:46px; }
+  h2{ font-size:clamp(22px,3vw,30px); letter-spacing:-.01em; margin:8px 0 6px; font-weight:800; scroll-margin-top:24px; }
+  h2 .num{ color:var(--accent); font-variant-numeric:tabular-nums; margin-right:12px; font-weight:800; }
+  h3{ font-size:20px; margin:34px 0 6px; font-weight:700; letter-spacing:-.005em; scroll-margin-top:24px; }
+  h4{ font-size:16px; margin:22px 0 4px; font-weight:700; color:var(--fg); }
+  .lead{ font-size:18px; color:var(--fg-soft); }
+  p{ margin:12px 0; }
+  a{ color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px; }
+  strong{ font-weight:700; }
+  .section-rule{ height:1px; background:var(--line-soft); border:0; margin:54px 0 0; }
+  ul.body,ol.body{ padding-left:22px; margin:12px 0; }
+  ul.body li,ol.body li{ margin:7px 0; }
+  .muted{ color:var(--fg-mute); }
+  code{ font-family:var(--mono); font-size:.86em; background:var(--code-bg); padding:2px 6px; border-radius:6px; border:1px solid var(--line-soft); }
+
+  /* 콜아웃 */
+  .callout{ border-radius:var(--radius); padding:18px 20px 18px 22px; margin:22px 0; border:1px solid var(--line);
+    background:var(--bg-elev); box-shadow:var(--shadow); position:relative; }
+  .callout .ct{ font-weight:800; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .callout p:last-child{ margin-bottom:0; }
+  .callout.insight{ border-left:4px solid var(--accent-3); }
+  .callout.insight .ct{ color:var(--accent-3); }
+  .callout.info{ border-left:4px solid var(--accent-2); }
+  .callout.info .ct{ color:var(--accent-2); }
+  .callout.warn{ border-left:4px solid var(--warn); }
+  .callout.warn .ct{ color:var(--warn); }
+  .callout.key{ border-left:4px solid var(--accent); background:linear-gradient(180deg, color-mix(in srgb,var(--accent) 7%, var(--bg-elev)), var(--bg-elev)); }
+  .callout.key .ct{ color:var(--accent); }
+
+  /* 표 */
+  .tbl-wrap{ overflow-x:auto; margin:22px 0; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); background:var(--bg-elev); }
+  table{ border-collapse:collapse; width:100%; font-size:14px; min-width:560px; }
+  th,td{ text-align:left; padding:11px 14px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+  thead th{ background:var(--bg-soft); font-size:12.5px; letter-spacing:.02em; text-transform:uppercase; color:var(--fg-soft); font-weight:700; border-bottom:1px solid var(--line); position:sticky; top:0; }
+  tbody tr:last-child td{ border-bottom:0; }
+  tbody tr:hover{ background:color-mix(in srgb,var(--accent) 4%, transparent); }
+  td b{ color:var(--fg); }
+  .pill{ display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:999px; line-height:1.7; white-space:nowrap; }
+  .pill.g{ background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good); }
+  .pill.b{ background:color-mix(in srgb,var(--bad) 16%,transparent); color:var(--bad); }
+  .pill.w{ background:color-mix(in srgb,var(--warn) 18%,transparent); color:var(--warn); }
+  .pill.a{ background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent); }
+
+  /* 카드 그리드 */
+  .grid{ display:grid; gap:16px; margin:22px 0; }
+  .grid.c2{ grid-template-columns:repeat(2,1fr); }
+  .grid.c4{ grid-template-columns:repeat(4,1fr); }
+  .card{ background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+  .card h4{ margin:0 0 6px; display:flex; align-items:center; gap:9px; }
+  .card .tag{ font-size:11px; font-weight:800; color:var(--accent); letter-spacing:.05em; }
+  .card p{ margin:6px 0 0; font-size:14px; color:var(--fg-soft); }
+  .ic{ width:30px; height:30px; flex:0 0 auto; border-radius:8px; display:grid; place-items:center; background:color-mix(in srgb,var(--accent) 12%,transparent); color:var(--accent); font-weight:800; font-size:14px; }
+
+  /* P-A-C-A 다이어그램 + 일반 figure */
+  figure{ margin:26px 0; }
+  figure svg{ width:100%; height:auto; display:block; }
+  figcaption{ font-size:13px; color:var(--fg-mute); text-align:center; margin-top:10px; }
+  .svgbox{ background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); }
+
+  /* 타임라인 */
+  .timeline{ position:relative; margin:26px 0 8px; padding-left:26px; }
+  .timeline::before{ content:""; position:absolute; left:7px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--accent),var(--accent-2)); }
+  .tl-item{ position:relative; margin:0 0 20px; }
+  .tl-item::before{ content:""; position:absolute; left:-26px; top:5px; width:14px; height:14px; border-radius:50%; background:var(--bg); border:3px solid var(--accent); }
+  .tl-item .yr{ font-weight:800; color:var(--accent); font-size:13px; font-variant-numeric:tabular-nums; }
+  .tl-item .tt{ font-weight:700; }
+  .tl-item p{ margin:3px 0 0; font-size:14px; color:var(--fg-soft); }
+
+  /* 사다리(성숙도) */
+  .ladder{ display:grid; gap:10px; margin:22px 0; }
+  .rung{ display:grid; grid-template-columns:72px 1fr; gap:14px; align-items:stretch; background:var(--bg-elev); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); }
+  .rung .lv{ display:grid; place-items:center; border-radius:10px; font-weight:800; font-size:15px; color:#fff; text-align:center; line-height:1.15; }
+  .rung .lv small{ font-weight:600; font-size:10px; opacity:.9; }
+  .rung h4{ margin:0 0 3px; }
+  .rung p{ margin:0; font-size:13.5px; color:var(--fg-soft); }
+  .lv0{ background:#868e96; } .lv1{ background:#4c6ef5; } .lv2{ background:#7048e8; } .lv3{ background:#0c8599; } .lv4{ background:#2b8a3e; }
+
+  /* 인용/푸터 */
+  blockquote{ margin:20px 0; padding:6px 0 6px 20px; border-left:3px solid var(--accent); color:var(--fg-soft); font-style:italic; }
+  .refs{ font-size:14px; }
+  .refs li{ margin:9px 0; }
+  footer{ border-top:1px solid var(--line); margin-top:60px; padding-top:24px; color:var(--fg-mute); font-size:13.5px; }
+
+  /* 추적성 매트릭스 (체크박스 격자) */
+  table.mx{ min-width:640px; }
+  table.mx th, table.mx td{ text-align:center; }
+  table.mx th.rh, table.mx td.rh{ text-align:left; white-space:nowrap; }
+  table.mx td.rh .art{ display:block; font-size:11px; color:var(--fg-mute); font-weight:400; margin-top:1px; }
+  .cbx{ display:inline-grid; place-items:center; width:24px; height:24px; border-radius:7px; font-size:13px; font-weight:800; border:1.5px solid var(--line); line-height:1; }
+  .cbx.on{ background:color-mix(in srgb,var(--good) 18%,transparent); border-color:var(--good); color:var(--good); }
+  .cbx.off{ background:color-mix(in srgb,var(--bad) 14%,transparent); border-color:var(--bad); color:var(--bad); }
+  .cbx.part{ background:color-mix(in srgb,var(--warn) 18%,transparent); border-color:var(--warn); color:var(--warn); }
+
+  /* 용어 사전 검색창 */
+  input.gloss{ width:100%; max-width:440px; padding:11px 14px; font-size:15px; font-family:inherit;
+    border:1px solid var(--line); border-radius:10px; background:var(--bg-elev); color:var(--fg);
+    margin:8px 0 6px; box-shadow:var(--shadow); }
+  input.gloss::placeholder{ color:var(--fg-mute); }
+  input.gloss:focus{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+
+  /* 컨트롤 */
+  .controls{ position:fixed; right:18px; bottom:18px; display:flex; flex-direction:column; gap:10px; z-index:100; }
+  .btn{ width:42px; height:42px; border-radius:50%; border:1px solid var(--line); background:var(--bg-elev); color:var(--fg);
+    cursor:pointer; box-shadow:var(--shadow); font-size:17px; display:grid; place-items:center; transition:transform .12s, background .15s; }
+  .btn:hover{ transform:translateY(-2px); background:var(--bg-soft); }
+
+  /* 모바일 */
+  .menu-toggle{ display:none; }
+  @media (max-width: 980px){
+    .wrap{ grid-template-columns:1fr; }
+    nav.toc{ position:fixed; z-index:110; top:0; left:0; width:84%; max-width:330px; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease; box-shadow:var(--shadow); }
+    nav.toc.open{ transform:translateX(0); }
+    .menu-toggle{ display:grid; position:fixed; top:14px; left:14px; z-index:100; }
+    main{ padding-top:8px; }
+    .grid.c2,.grid.c4{ grid-template-columns:1fr; }
+  }
+
+  /* 인쇄 전용 요소 (화면에서는 숨김) */
+  .print-only{ display:none; }
+
+  /* 인쇄 */
+  @media print{
+    nav.toc,.controls,.menu-toggle,#progress{ display:none !important; }
+    .wrap{ grid-template-columns:1fr; max-width:none; }
+    main{ padding:0; }
+    body{ background:#fff; color:#000; font-size:11.5pt; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .card,.callout,.tbl-wrap,.svgbox,.rung{ box-shadow:none; break-inside:avoid; }
+    section{ break-inside:auto; }
+    h2{ break-after:avoid; }
+    a{ color:#000; text-decoration:none; }
+    @page{ margin:16mm 15mm; }
+
+    /* 인쇄 표지 + 목차 */
+    .print-only{ display:block; }
+    .cover{ break-after:page; min-height:90vh; display:flex; align-items:center; padding-top:0; }
+    .cover-bar{ height:8px; width:96px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:4px; margin-bottom:26px; }
+    .cover-eyebrow{ font-size:12px; letter-spacing:.18em; text-transform:uppercase; font-weight:800; color:var(--accent); }
+    .cover-title{ font-size:31px; line-height:1.2; margin:12px 0 14px; font-weight:800; color:#16203a; }
+    .cover-sub{ font-size:13px; line-height:1.7; color:#3a445c; max-width:560px; }
+    .cover-meta{ margin-top:46px; font-size:12.5px; display:grid; gap:7px; color:#3a445c; }
+    .cover-meta b{ color:#16203a; display:inline-block; min-width:84px; }
+    .cover-foot{ margin-top:54px; font-size:11px; color:#8a93a6; border-top:1px solid #d6dbe6; padding-top:12px; letter-spacing:.03em; }
+    .print-toc{ break-after:page; }
+    .ptoc-h{ font-size:21px; border-bottom:2px solid var(--accent); padding-bottom:8px; margin:0 0 16px; }
+    .ptoc{ list-style:none; padding:0; margin:0; font-size:13.5px; }
+    .ptoc > li{ font-weight:700; margin:9px 0 2px; color:#16203a; }
+    .ptoc ul{ list-style:none; padding:2px 0 0 16px; margin:0; }
+    .ptoc ul li{ font-weight:400; font-size:12px; color:#55607a; margin:1px 0; }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<button class="btn menu-toggle" id="menuToggle" aria-label="목차 열기">☰</button>
+
+<div class="wrap">
+  <!-- ============================ 목차 ============================ -->
+  <nav class="toc" id="toc">
+    <div class="brand">AI 협업 SW 개발 방법론
+      <small>기술 백서 · 종합 심층판</small>
+    </div>
+    <div class="grp">Overview</div>
+    <ul>
+      <li><a href="#summary">0. Executive Summary</a></li>
+    </ul>
+    <div class="grp">Part 1 · 분석</div>
+    <ul>
+      <li><a href="#paca">1. Paca 심층 분석</a></li>
+      <li><a href="#paca-id" class="sub">1.1 정체성과 철학</a></li>
+      <li><a href="#paca-cycle" class="sub">1.2 P-A-C-A 사이클</a></li>
+      <li><a href="#paca-arch" class="sub">1.3 아키텍처 · 기능</a></li>
+      <li><a href="#paca-dna" class="sub">1.4 방법론적 DNA와 한계</a></li>
+    </ul>
+    <div class="grp">Part 2 · 계보</div>
+    <ul>
+      <li><a href="#genealogy">2. 방법론의 계보</a></li>
+      <li><a href="#timeline" class="sub">2.1 진화의 타임라인</a></li>
+      <li><a href="#rup" class="sub">2.2 RUP</a></li>
+      <li><a href="#ooad" class="sub">2.3 OOAD</a></li>
+      <li><a href="#cbd" class="sub">2.4 CBD</a></li>
+      <li><a href="#spl" class="sub">2.5 SPL</a></li>
+      <li><a href="#compare" class="sub">2.6 비교 정리</a></li>
+    </ul>
+    <div class="grp">Part 3 · 정립</div>
+    <ul>
+      <li><a href="#converge">3. AI-협업 방법론 정립</a></li>
+      <li><a href="#genes" class="sub">3.1 유전자 통합</a></li>
+      <li><a href="#framework" class="sub">3.2 제안 프레임워크 (AID)</a></li>
+      <li><a href="#aid-principles" class="sub">— 설계 원칙</a></li>
+      <li><a href="#aid-layers" class="sub">— 4계층 상세</a></li>
+      <li><a href="#aid-operating" class="sub">— 운영 모델</a></li>
+      <li><a href="#aid-vs" class="sub">— 기존 대비</a></li>
+      <li><a href="#roles" class="sub">3.3 인간–AI 역할 모델</a></li>
+      <li><a href="#artifacts" class="sub">3.4 산출물 · 추적성</a></li>
+      <li><a href="#governance" class="sub">3.5 거버넌스 · 검증</a></li>
+      <li><a href="#aidlc" class="sub">3.6 AID와 AI-DLC</a></li>
+    </ul>
+    <div class="grp">Part 4 · 인증</div>
+    <ul>
+      <li><a href="#cert">4. CMMI · SP 정합성</a></li>
+      <li><a href="#cmmi" class="sub">4.1 CMMI v3.0</a></li>
+      <li><a href="#sp" class="sub">4.2 한국 SP인증</a></li>
+      <li><a href="#cert-map" class="sub">4.3 등급 매핑</a></li>
+      <li><a href="#cert-fit" class="sub">4.4 부합 요건</a></li>
+      <li><a href="#cert-real" class="sub">4.5 현실성 통찰</a></li>
+    </ul>
+    <div class="grp">Part 5 · 내재화</div>
+    <ul>
+      <li><a href="#roadmap">5. 내재화 로드맵</a></li>
+      <li><a href="#maturity" class="sub">5.1 성숙도 모델</a></li>
+      <li><a href="#checklist" class="sub">5.2 단계별 체크리스트</a></li>
+      <li><a href="#antipattern" class="sub">5.3 안티패턴</a></li>
+      <li><a href="#kpi" class="sub">5.4 KPI · 측정</a></li>
+      <li><a href="#roi" class="sub">5.5 ROI 금액 환산</a></li>
+      <li><a href="#risk" class="sub">5.6 리스크 대응</a></li>
+    </ul>
+    <div class="grp">Closing</div>
+    <ul>
+      <li><a href="#conclusion">6. 결론</a></li>
+      <li><a href="#glossary">부록 A · 용어 사전</a></li>
+      <li><a href="#sp2-checklist">부록 B · SP 2등급 체크리스트</a></li>
+      <li><a href="#pilot">부록 C · 4주 파일럿 플랜</a></li>
+      <li><a href="#refs">참고자료</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============================ 본문 ============================ -->
+  <main>
+  <div class="content">
+
+    <!-- ===== 인쇄용 표지 ===== -->
+    <section class="cover print-only" aria-hidden="true">
+      <div>
+        <div class="cover-bar"></div>
+        <div class="cover-eyebrow">Technical White Paper · 종합 심층판</div>
+        <h1 class="cover-title">인간–AI 협업 시대의<br>소프트웨어 개발 방법론 정립</h1>
+        <p class="cover-sub">오픈소스 프로젝트 관리 도구 Paca와 AWS AI-DLC 분석 · 고전 방법론(RUP·OOAD·CBD·SPL) 계보 · CMMI·SP인증 정합 · 내재화 로드맵</p>
+        <div class="cover-meta">
+          <div><b>문서 유형</b> 기술 백서(종합)</div>
+          <div><b>범위</b> 분석 · 계보 · 정립 · 인증 · 내재화</div>
+          <div><b>핵심 산출</b> AID 프레임워크 + 4주 파일럿 플랜</div>
+          <div><b>작성일</b> 2026-06-29</div>
+        </div>
+        <div class="cover-foot">AID — Augmented Iterative Delivery Framework · 인간 책임 게이트 기반 인간–AI 협업 개발 방법론</div>
+      </div>
+    </section>
+
+    <!-- ===== 인쇄용 목차 ===== -->
+    <nav class="print-toc print-only" aria-hidden="true">
+      <h2 class="ptoc-h">목차 · Contents</h2>
+      <ol class="ptoc">
+        <li>0. Executive Summary</li>
+        <li>1. Paca 심층 분석
+          <ul><li>1.1 정체성과 철학</li><li>1.2 P-A-C-A 사이클</li><li>1.3 아키텍처·기능</li><li>1.4 방법론적 DNA와 한계</li></ul></li>
+        <li>2. 방법론의 계보
+          <ul><li>2.1 진화의 타임라인 · 계보 트리</li><li>2.2 RUP</li><li>2.3 OOAD</li><li>2.4 CBD</li><li>2.5 SPL</li><li>2.6 비교 정리</li></ul></li>
+        <li>3. AI-협업 방법론 정립 (AID)
+          <ul><li>3.1 유전자 통합</li><li>3.2 제안 프레임워크 — 설계원칙·4계층·운영모델</li><li>3.3 인간–AI 역할(RACI)</li><li>3.4 산출물·추적성</li><li>3.5 거버넌스·검증</li><li>3.6 AID와 AI-DLC</li></ul></li>
+        <li>4. CMMI · SP인증 정합성
+          <ul><li>4.1 CMMI v3.0</li><li>4.2 한국 SP인증</li><li>4.3 등급 매핑</li><li>4.4 부합 요건 · SP 2·3등급 상세</li><li>4.5 현실성 통찰</li></ul></li>
+        <li>5. 내재화 로드맵
+          <ul><li>5.1 성숙도 모델</li><li>5.2 단계별 체크리스트</li><li>5.3 안티패턴</li><li>5.4 KPI·측정</li><li>5.5 ROI 금액 환산</li><li>5.6 리스크 대응</li></ul></li>
+        <li>6. 결론</li>
+        <li>부록 A · 용어 사전</li>
+        <li>부록 B · SP 2등급 인증 준비 체크리스트</li>
+        <li>부록 C · 4주 파일럿 도입 플랜</li>
+        <li>참고자료</li>
+      </ol>
+    </nav>
+
+    <header class="hero" id="top">
+      <span class="eyebrow">Technical White Paper</span>
+      <h1>인간–AI 협업 시대의<br>소프트웨어 개발 방법론 정립</h1>
+      <p class="subtitle">오픈소스 프로젝트 관리 도구 <b>Paca</b>를 렌즈로, 고전 방법론부터 RUP·OOAD·CBD·SPL을 거쳐 CMMI·SP인증까지 — 앞으로 내재화해야 할 개발 방법론의 방향을 정립한다.</p>
+      <div class="meta-row">
+        <span><b>대상</b> 기술 백서(종합)</span>
+        <span><b>범위</b> 분석 · 계보 · 정립 · 인증 · 내재화</span>
+        <span><b>형식</b> 자체완결 단일 HTML</span>
+        <span><b>작성일</b> 2026-06-29</span>
+      </div>
+    </header>
+
+    <!-- ===================== 0. Executive Summary ===================== -->
+    <section id="summary">
+      <h2><span class="num">0</span>Executive Summary</h2>
+      <p class="lead">AI 에이전트는 더 이상 "도구"가 아니라 "팀원"이 되고 있다. 이는 도구의 교체가 아니라 <strong>개발 방법론의 재정의</strong>를 요구한다.</p>
+      <p>Paca는 AI 에이전트를 스크럼 팀의 동등한 구성원으로 취급하는 자체 호스팅 오픈소스 프로젝트 관리 플랫폼이다. 그 설계 철학(<b>P-A-C-A: Plan–Act–Check–Adapt</b>)은 새로운 발명이라기보다, 애자일·PDCA·복잡계 관리(Cynefin)의 검증된 원리를 <em>인간과 AI가 같은 보드 위에서 협업</em>하도록 재배치한 결과물이다. 따라서 Paca는 "정답"이 아니라, 앞으로의 방법론이 풀어야 할 문제를 구체적으로 보여주는 <strong>살아있는 사례(reference implementation)</strong>로 읽어야 한다.</p>
+
+      <div class="grid c4">
+        <div class="card"><h4><span class="ic">1</span>관찰</h4><p>AI를 동료로 받아들이면 <b>역할·산출물·검증·거버넌스</b> 전 영역이 흔들린다. 도구 도입이 아니라 프로세스 재설계의 문제다.</p></div>
+        <div class="card"><h4><span class="ic">2</span>계보</h4><p>RUP의 반복·아키텍처, OOAD의 모델, CBD의 조립, SPL의 변동성 관리는 <b>폐기 대상이 아니라 AI 시대의 부품</b>이다.</p></div>
+        <div class="card"><h4><span class="ic">3</span>정립</h4><p>P-A-C-A를 뼈대로 네 방법론의 유전자를 이식한 <b>증강 반복 모델(AID)</b>을 제안한다.</p></div>
+        <div class="card"><h4><span class="ic">4</span>인증</h4><p>CMMI·SP인증은 <b>증적 자동화</b>로 가까워지지만, AI 행위자 평가의 공백은 남는다. 책임 소재를 인간에 고정하라.</p></div>
+      </div>
+
+      <div class="callout key">
+        <div class="ct">⬡ 핵심 결론</div>
+        <p>① <b>버리지 말고 흡수하라.</b> 고전 방법론은 AI 협업의 골격이 된다. ② <b>산출물을 살아있게 하라.</b> BDD·SDD를 사람과 AI가 공동 편집하는 단일 진실 원천(Living Spec)으로 둘 때, 협업·추적성·인증 증적이 동시에 해결된다. ③ <b>책임은 자동화하지 마라.</b> AI는 산출물을 생성하지만, <em>승인·검증·책임</em>은 인간 게이트에 고정해야 인증 체계와 신뢰가 성립한다. ④ <b>성숙도로 단계화하라.</b> 한 번에 가지 말고 Lv0→Lv4로 점진 내재화하라.</p>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 1. Paca 심층 분석 ===================== -->
+    <section id="paca">
+      <h2><span class="num">1</span>Paca 심층 분석</h2>
+      <p class="lead">먼저 분석 대상을 정확히 해부한다. Paca가 무엇을 주장하고, 그 주장이 어떤 방법론적 가정 위에 서 있는지를 드러낸다.</p>
+
+      <h3 id="paca-id">1.1 정체성과 철학 — "AI를 동료로"</h3>
+      <p>Paca는 Jira·ClickUp·Monday·Trello 같은 상용 도구의 <em>오픈소스·자체 호스팅 대안</em>을 표방한다(Apache 2.0). 그러나 본질적 차별점은 라이선스가 아니라 <strong>AI 에이전트를 팀의 일급 구성원(first-class team member)으로 취급</strong>한다는 철학에 있다. 기존 도구가 AI를 "부가 자동화"나 "챗봇 애드온"으로 붙였다면, Paca는 AI가 같은 보드, 같은 스프린트, 같은 목표를 인간과 공유한다.</p>
+      <blockquote>"AI agents should participate in the Scrum process, not just generate output in isolation." — 에이전트는 고립된 산출이 아니라 스크럼 프로세스에 <em>참여</em>한다.</blockquote>
+      <p>이 한 문장이 방법론적으로 함의하는 바는 크다. 에이전트가 백로그에서 작업을 집어 상태를 갱신하고, PO와 함께 BDD 시나리오를 공동 저작하며, 시스템 설계 문서(SDD)에 기여한다면 — 우리는 <b>역할 정의, 작업 분배, 산출물 소유권, 검증 책임, 감사 추적</b>을 모두 다시 써야 한다.</p>
+
+      <h3 id="paca-cycle">1.2 P-A-C-A 사이클 해부</h3>
+      <p>Paca는 작업을 네 국면으로 구조화한다. 이는 데밍의 PDCA, 스크럼의 스프린트 리듬, 그리고 복잡계 대응 모델(probe–sense–respond)을 인간–AI 협업 문맥에 맞춰 재배치한 것으로 읽힌다.</p>
+
+      <figure>
+        <div class="svgbox">
+          <svg viewBox="0 0 760 300" role="img" aria-label="P-A-C-A 순환 다이어그램">
+            <defs>
+              <marker id="arw" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L7,3 L0,6 z" fill="currentColor"/>
+              </marker>
+            </defs>
+            <g font-family="inherit" color="#3b5bdb">
+              <!-- nodes -->
+              <g>
+                <rect x="40" y="40" width="150" height="92" rx="14" fill="#3b5bdb"/>
+                <text x="115" y="74" text-anchor="middle" fill="#fff" font-size="19" font-weight="800">Plan</text>
+                <text x="115" y="98" text-anchor="middle" fill="#dbe4ff" font-size="12">계획 · BDD 정련</text>
+                <text x="115" y="116" text-anchor="middle" fill="#dbe4ff" font-size="12">백로그 협업 설계</text>
+              </g>
+              <g>
+                <rect x="570" y="40" width="150" height="92" rx="14" fill="#6741d9"/>
+                <text x="645" y="74" text-anchor="middle" fill="#fff" font-size="19" font-weight="800">Act</text>
+                <text x="645" y="98" text-anchor="middle" fill="#e5dbff" font-size="12">실행 · 인간+AI</text>
+                <text x="645" y="116" text-anchor="middle" fill="#e5dbff" font-size="12">스프린트 공동 수행</text>
+              </g>
+              <g>
+                <rect x="570" y="180" width="150" height="92" rx="14" fill="#0c8599"/>
+                <text x="645" y="214" text-anchor="middle" fill="#fff" font-size="19" font-weight="800">Check</text>
+                <text x="645" y="238" text-anchor="middle" fill="#c5f6fa" font-size="12">검증 · 자동 리뷰</text>
+                <text x="645" y="256" text-anchor="middle" fill="#c5f6fa" font-size="12">확인 · 게이트</text>
+              </g>
+              <g>
+                <rect x="40" y="180" width="150" height="92" rx="14" fill="#2b8a3e"/>
+                <text x="115" y="214" text-anchor="middle" fill="#fff" font-size="19" font-weight="800">Adapt</text>
+                <text x="115" y="238" text-anchor="middle" fill="#d3f9d8" font-size="12">회고 · 적응</text>
+                <text x="115" y="256" text-anchor="middle" fill="#d3f9d8" font-size="12">다음 사이클 반영</text>
+              </g>
+              <!-- arrows -->
+              <path d="M196,86 L562,86" fill="none" stroke="currentColor" stroke-width="2.5" marker-end="url(#arw)"/>
+              <path d="M645,138 L645,174" fill="none" stroke="#0c8599" stroke-width="2.5" marker-end="url(#arw)"/>
+              <path d="M562,226 L198,226" fill="none" stroke="#2b8a3e" stroke-width="2.5" marker-end="url(#arw)"/>
+              <path d="M115,174 L115,138" fill="none" stroke="#3b5bdb" stroke-width="2.5" marker-end="url(#arw)"/>
+              <text x="380" y="76" text-anchor="middle" fill="#7a8499" font-size="12">합의된 계획</text>
+              <text x="380" y="246" text-anchor="middle" fill="#7a8499" font-size="12">학습의 환류</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>그림 1. P-A-C-A 사이클 — PDCA·스프린트·복잡계 대응을 인간–AI 협업으로 재배치</figcaption>
+      </figure>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>국면</th><th>핵심 활동</th><th>인간–AI 협업 양상</th><th>고전적 뿌리</th></tr></thead>
+          <tbody>
+            <tr><td><b>Plan</b></td><td>백로그 정련, BDD 시나리오 작성, 목표 합의</td><td>PO와 에이전트가 Gherkin 시나리오 공동 저작</td><td>스크럼 백로그 리파인먼트 · 데밍 Plan</td></tr>
+            <tr><td><b>Act</b></td><td>스프린트 작업 실행</td><td>에이전트가 작업을 집어 상태 갱신·코드 산출(OpenHands 샌드박스)</td><td>XP의 짧은 반복 · 데밍 Do</td></tr>
+            <tr><td><b>Check</b></td><td>자동 검증·리뷰, 확인</td><td>산출물 자동 검증 + 인간 승인 게이트</td><td>V&amp;V · 데밍 Check</td></tr>
+            <tr><td><b>Adapt</b></td><td>회고, 프로세스 개선</td><td>"탐색·감지·대응"으로 떠오르는 복잡성에 적응</td><td>스크럼 회고 · Cynefin · 데밍 Act</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="paca-arch">1.3 아키텍처와 핵심 기능</h3>
+      <p>Paca의 기능 집합은 "협업이 가능하려면 무엇이 필요한가"라는 질문에 대한 구체적 답이다. 각 기능은 방법론적 요구사항을 기술로 구현한 것이다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>구성요소 / 기능</th><th>설명</th><th>방법론적 의미</th></tr></thead>
+          <tbody>
+            <tr><td><b>통합 Scrumban 보드</b></td><td>인간과 AI가 실시간으로 같은 보드를 공유</td><td>가시성·공동 작업 공간 — 협업의 전제</td></tr>
+            <tr><td><b>BDD 협업</b></td><td>Gherkin 시나리오 공동 저작</td><td>요구사항을 <em>실행 가능한 명세</em>로 — 인간·AI 공통 언어</td></tr>
+            <tr><td><b>SDD(System Design Documents)</b></td><td>살아있는 아키텍처 가이드</td><td>아키텍처 중심성(RUP) — AI에게 설계 맥락 제공</td></tr>
+            <tr><td><b>MCP 서버 통합</b></td><td>Claude 등 MCP 호환 에이전트가 데이터 계층에 직접 접속</td><td>표준 인터페이스 — 에이전트 상호운용성</td></tr>
+            <tr><td><b>Claude Code <code>/paca</code> 스킬</b></td><td>에디터에서 자연어 슬래시 명령으로 작업 관리</td><td>개발 흐름에 협업을 내장(in-the-flow)</td></tr>
+            <tr><td><b>OpenHands 에이전트</b></td><td>격리된 샌드박스 컨테이너에서 실행</td><td>자율 실행 + 격리 — 신뢰 경계</td></tr>
+            <tr><td><b>WASM 플러그인 샌드박스</b></td><td>역량 기반(capability) 권한 모델</td><td>확장성 + 최소 권한 — 공급망/권한 상승 방지</td></tr>
+            <tr><td><b>Activity Diff &amp; Revert</b></td><td>필드 변경 추적·되돌리기</td><td><em>감사 추적(audit trail)</em> — 인증 증적의 씨앗</td></tr>
+            <tr><td><b>구성(Config) 주도</b></td><td>워크플로·상태·필드를 코드 없이 정의</td><td>프로세스를 데이터로 — process-as-config</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">기술 스택: React + TanStack Start(웹), Go + Gin(API), Node.js + Socket.IO(실시간), Python + FastAPI + OpenHands SDK(에이전트), PostgreSQL · Valkey(인프라), WASM(플러그인 런타임).</p>
+
+      <h3 id="paca-dna">1.4 Paca가 채택한 방법론적 DNA와 한계</h3>
+      <p>Paca를 방법론의 눈으로 보면, 그것은 명시적 선언 없이 여러 전통을 흡수하고 있다. 이를 드러내는 것이 본 백서 정립의 출발점이다.</p>
+      <div class="grid c2">
+        <div class="card"><div class="tag">흡수한 것</div>
+          <h4>검증된 원리의 재배치</h4>
+          <p>애자일/스크럼(반복·자기조직화), PDCA(개선 루프), BDD(실행 가능 명세), 아키텍처 문서(SDD), 최소권한·샌드박싱(보안공학). 새로운 패러다임이라기보다 <b>잘 조립된 종합</b>이다.</p>
+        </div>
+        <div class="card"><div class="tag">비어 있는 것</div>
+          <h4>방법론으로서의 공백</h4>
+          <p>① 에이전트의 <b>역할·책임 모델</b>이 도구 기능 수준에 머묾(누가 무엇을 승인하나?). ② <b>재사용·변동성 관리</b>(CBD·SPL)에 대한 명시적 입장 부재. ③ <b>프로세스 성숙도·인증</b> 정합성에 대한 설계 부재.</p>
+        </div>
+      </div>
+      <div class="callout insight">
+        <div class="ct">✦ 통찰</div>
+        <p>Paca의 가치는 "완성된 방법론"이 아니라 <b>방법론이 풀어야 할 문제를 작동하는 형태로 보여준다</b>는 데 있다. Activity Diff는 감사 추적의 씨앗이고, BDD·SDD 공동 저작은 추적성의 씨앗이며, 샌드박스·역량 모델은 거버넌스의 씨앗이다. 우리의 과제는 이 씨앗들을 <em>명시적 방법론</em>으로 키우는 것이다.</p>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 2. 방법론의 계보 ===================== -->
+    <section id="genealogy">
+      <h2><span class="num">2</span>방법론의 계보</h2>
+      <p class="lead">새 방법론은 진공에서 태어나지 않는다. AI 협업이라는 미래는 반세기의 축적 위에 선다. 무엇을 계승하고 무엇을 갱신할지 가리기 위해 계보를 짚는다.</p>
+
+      <h3 id="timeline">2.1 진화의 타임라인</h3>
+      <div class="timeline">
+        <div class="tl-item"><span class="yr">1970</span> <span class="tt">Waterfall (Royce)</span><p>단계적·문서 중심·순차. 예측 가능성을 추구했으나 변화에 취약. 역설적으로 Royce는 반복의 필요성을 이미 경고했다.</p></div>
+        <div class="tl-item"><span class="yr">1986</span> <span class="tt">Spiral (Boehm)</span><p>위험 주도 반복. "위험이 가장 큰 것을 먼저." 반복과 리스크 관리의 결합.</p></div>
+        <div class="tl-item"><span class="yr">1990s</span> <span class="tt">OOAD · UML</span><p>객체지향 분석/설계의 정립, UML 표준화(1997). 모델 중심 사고의 정점.</p></div>
+        <div class="tl-item"><span class="yr">1998</span> <span class="tt">RUP (Rational Unified Process)</span><p>반복·아키텍처 중심·유스케이스 주도의 통합 프로세스. 규율 있는 반복.</p></div>
+        <div class="tl-item"><span class="yr">1990s–2000s</span> <span class="tt">CBD · SPL</span><p>컴포넌트 기반 개발(조립식 재사용)과 소프트웨어 프로덕트 라인(체계적 변동성 관리·대량 맞춤).</p></div>
+        <div class="tl-item"><span class="yr">2001</span> <span class="tt">Agile Manifesto · Scrum · XP</span><p>경량·반복·사람 중심. "변화를 받아들이라." 무거운 프로세스에 대한 반작용.</p></div>
+        <div class="tl-item"><span class="yr">2009–</span> <span class="tt">DevOps · CI/CD</span><p>개발–운영 통합, 자동화, 짧은 피드백. 흐름(flow)의 가속.</p></div>
+        <div class="tl-item"><span class="yr">2023–</span> <span class="tt">AI-Agent 협업 (Paca 등)</span><p>LLM 에이전트가 팀원으로. 방법론의 다음 변곡점 — 본 백서의 주제.</p></div>
+      </div>
+      <figure>
+        <div class="svgbox">
+          <svg viewBox="0 0 820 560" role="img" aria-label="소프트웨어 개발 방법론 및 인증 계보 트리">
+            <defs>
+              <marker id="gA" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L6.5,3 L0,6 z" fill="#9aa4b8"/>
+              </marker>
+              <marker id="gAs" markerWidth="9" markerHeight="9" refX="2.5" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M6.5,0 L0,3 L6.5,6 z" fill="#9aa4b8"/>
+              </marker>
+              <linearGradient id="aidGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#3b5bdb"/><stop offset="1" stop-color="#0c8599"/>
+              </linearGradient>
+              <linearGradient id="certGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e8590c"/><stop offset="1" stop-color="#2b8a3e"/>
+              </linearGradient>
+            </defs>
+
+            <!-- ===== 방법론 계보 (상단) ===== -->
+            <g fill="none" stroke="#9aa4b8" stroke-width="2" marker-end="url(#gA)">
+              <path d="M80,80 L80,116"/>
+              <path d="M140,140 C 250,140 260,60 358,58"/>
+              <path d="M310,58 L356,58"/>
+              <path d="M250,80 L250,198"/>
+              <path d="M310,222 L356,222"/>
+              <path d="M480,322 L516,322"/>
+              <path d="M480,58 C 580,58 560,150 648,160"/>
+              <path d="M480,222 C 560,222 580,200 648,196"/>
+              <path d="M640,322 C 690,322 685,255 700,240"/>
+            </g>
+            <g fill="none" stroke="#adb5bd" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#gA)">
+              <path d="M80,80 C 50,300 210,322 356,322"/>
+            </g>
+            <text x="118" y="298" fill="#868e96" font-size="11" font-style="italic">반작용</text>
+            <g font-family="inherit" font-size="12.5" font-weight="700">
+              <g><rect x="20" y="36" width="120" height="44" rx="10" fill="#3b5bdb"/><text x="80" y="56" text-anchor="middle" fill="#fff">Waterfall</text><text x="80" y="71" text-anchor="middle" fill="#dbe4ff" font-size="10" font-weight="500">1970</text></g>
+              <g><rect x="20" y="118" width="120" height="44" rx="10" fill="#4263eb"/><text x="80" y="138" text-anchor="middle" fill="#fff">Spiral</text><text x="80" y="153" text-anchor="middle" fill="#dbe4ff" font-size="10" font-weight="500">1986 · 위험주도</text></g>
+              <g><rect x="190" y="36" width="120" height="44" rx="10" fill="#6741d9"/><text x="250" y="56" text-anchor="middle" fill="#fff">OOAD · UML</text><text x="250" y="71" text-anchor="middle" fill="#e5dbff" font-size="10" font-weight="500">1990s</text></g>
+              <g><rect x="190" y="200" width="120" height="44" rx="10" fill="#0c8599"/><text x="250" y="220" text-anchor="middle" fill="#fff">CBD</text><text x="250" y="235" text-anchor="middle" fill="#c5f6fa" font-size="10" font-weight="500">컴포넌트·재사용</text></g>
+              <g><rect x="360" y="36" width="120" height="44" rx="10" fill="#5c4bc4"/><text x="420" y="56" text-anchor="middle" fill="#fff">RUP</text><text x="420" y="71" text-anchor="middle" fill="#e5dbff" font-size="10" font-weight="500">1998 · 반복+아키텍처</text></g>
+              <g><rect x="360" y="200" width="120" height="44" rx="10" fill="#0c8599"/><text x="420" y="220" text-anchor="middle" fill="#fff">SPL</text><text x="420" y="235" text-anchor="middle" fill="#c5f6fa" font-size="10" font-weight="500">핵심자산·변동성</text></g>
+              <g><rect x="360" y="300" width="120" height="44" rx="10" fill="#2b8a3e"/><text x="420" y="320" text-anchor="middle" fill="#fff">Agile·Scrum·XP</text><text x="420" y="335" text-anchor="middle" fill="#d3f9d8" font-size="10" font-weight="500">2001</text></g>
+              <g><rect x="520" y="300" width="120" height="44" rx="10" fill="#2f9e44"/><text x="580" y="320" text-anchor="middle" fill="#fff">DevOps·CI/CD</text><text x="580" y="335" text-anchor="middle" fill="#d3f9d8" font-size="10" font-weight="500">2009~</text></g>
+              <g><rect x="650" y="120" width="120" height="120" rx="14" fill="url(#aidGrad)"/><text x="710" y="168" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">AID</text><text x="710" y="188" text-anchor="middle" fill="#e7f5ff" font-size="10" font-weight="600">증강 반복 전달</text><text x="710" y="204" text-anchor="middle" fill="#e7f5ff" font-size="9" font-weight="500">2023~ · 종합</text></g>
+            </g>
+
+            <!-- ===== 구분선 ===== -->
+            <line x1="16" y1="356" x2="804" y2="356" stroke="#ced4da" stroke-width="1.4" stroke-dasharray="4 4"/>
+            <text x="20" y="346" fill="#868e96" font-size="11.5" font-weight="700">▲ 방법론 계보</text>
+            <text x="20" y="378" fill="#c77800" font-size="11.5" font-weight="700">▼ 인증 · 프로세스 성숙도 계보</text>
+
+            <!-- ===== 인증 계보 (하단) ===== -->
+            <g fill="none" stroke="#9aa4b8" stroke-width="2" marker-end="url(#gA)">
+              <path d="M160,419 C 182,419 184,445 198,449"/>
+              <path d="M160,495 C 182,495 184,461 198,455"/>
+              <path d="M360,447 C 388,447 392,422 408,419"/>
+              <path d="M360,461 C 388,461 392,492 408,495"/>
+              <path d="M480,440 C 482,470 560,496 586,498"/>
+              <path d="M300,478 C 330,520 540,512 586,506"/>
+              <path d="M550,419 C 600,419 612,428 646,432"/>
+              <path d="M740,496 C 762,480 742,470 726,468"/>
+            </g>
+            <g font-family="inherit" font-size="11.5" font-weight="700">
+              <g><rect x="20" y="398" width="140" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="90" y="416" text-anchor="middle" fill="#1c2330">CMM · SW-CMM</text><text x="90" y="431" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">SEI, 1986~</text></g>
+              <g><rect x="20" y="474" width="140" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="90" y="492" text-anchor="middle" fill="#1c2330">ISO/IEC 12207</text><text x="90" y="507" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">1995 · 라이프사이클</text></g>
+              <g><rect x="200" y="430" width="160" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="280" y="448" text-anchor="middle" fill="#1c2330">ISO/IEC 15504 · SPICE</text><text x="280" y="463" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">1998</text></g>
+              <g><rect x="410" y="398" width="140" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="480" y="416" text-anchor="middle" fill="#1c2330">CMMI</text><text x="480" y="431" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">2000 → v3.0 · AIM</text></g>
+              <g><rect x="410" y="474" width="140" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="480" y="492" text-anchor="middle" fill="#1c2330">ISO/IEC 33000</text><text x="480" y="507" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">2015 · 15504 후속</text></g>
+              <g><rect x="586" y="476" width="150" height="42" rx="9" fill="#fff" stroke="#e8590c" stroke-width="1.5"/><text x="661" y="494" text-anchor="middle" fill="#1c2330">SP인증 (KR)</text><text x="661" y="509" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">K-model · NIPA</text></g>
+              <g><rect x="646" y="392" width="154" height="84" rx="12" fill="url(#certGrad)"/><text x="723" y="426" text-anchor="middle" fill="#fff" font-size="13" font-weight="800">인증 정합 · 성숙도</text><text x="723" y="446" text-anchor="middle" fill="#fff5ee" font-size="9.5" font-weight="500">CMMI · SP · ISO 33000</text><text x="723" y="461" text-anchor="middle" fill="#fff5ee" font-size="9" font-weight="500">→ Part 4</text></g>
+            </g>
+
+            <!-- ===== 정합·정렬 (AID ↔ 인증) ===== -->
+            <path d="M712,242 L721,388" fill="none" stroke="#748ffc" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#gA)" marker-start="url(#gAs)"/>
+            <text x="700" y="318" text-anchor="end" fill="#5c7cfa" font-size="10.5" font-weight="700" font-style="italic">정합·정렬</text>
+          </svg>
+        </div>
+        <figcaption>그림 2. 계보 트리 — (상단) 방법론 네 갈래가 AID로 수렴하고, (하단) 인증·성숙도 표준(CMM → SPICE/15504 → CMMI·ISO 33000, 한국 SP인증)이 "인증 정합"으로 수렴한다. 두 계보는 <b>정합·정렬</b>로 이어진다(Part 4).</figcaption>
+      </figure>
+
+      <div class="callout info">
+        <div class="ct">◇ 진자(振子)의 관점</div>
+        <p>역사는 <b>규율(예측·문서·모델) ↔ 민첩(적응·경량·사람)</b> 사이를 오갔다. AI 협업은 이 진자를 <em>종합</em>할 기회다. AI는 무거운 산출물(모델·문서·명세)의 생성 비용을 급격히 낮추므로, "규율은 무겁다"는 애자일의 전제 자체가 흔들린다. <b>저비용으로 규율을 회복</b>할 수 있게 된 것이다.</p>
+      </div>
+
+      <h3 id="rup">2.2 RUP — 반복과 아키텍처의 규율</h3>
+      <p>RUP는 네 단계(<b>Inception → Elaboration → Construction → Transition</b>)를 반복적으로 진행하며, 각 반복마다 위험을 줄이고 실행 가능한 산출물을 낸다. 핵심은 두 가지다: <b>아키텍처 중심성</b>(초기에 핵심 아키텍처를 안정화)과 <b>유스케이스 주도</b>(요구를 유스케이스로 묶어 추적).</p>
+      <ul class="body">
+        <li><b>6대 모범사례:</b> 반복 개발, 요구 관리, 컴포넌트 아키텍처, 시각적 모델링(UML), 지속적 품질 검증, 변경 통제.</li>
+        <li><b>AI 시대 재해석:</b> "아키텍처를 먼저 안정화"는 에이전트에게 <em>설계 맥락(SDD)</em>을 주는 것과 직결된다. 맥락 없는 에이전트는 국소적으로만 옳은 코드를 양산한다. RUP의 규율은 AI 협업의 <b>가드레일</b>로 부활한다.</li>
+      </ul>
+
+      <h3 id="ooad">2.3 OOAD — 모델과 책임의 언어</h3>
+      <p>객체지향 분석·설계는 문제 영역을 객체(책임을 가진 개체)로 모델링한다. 캡슐화·추상화·다형성·상속, 책임 주도 설계(RDD), 도메인 모델, UML이 그 자산이다.</p>
+      <ul class="body">
+        <li><b>핵심 가치:</b> 도메인을 <em>공통 언어(모델)</em>로 표현해 이해·소통·검증을 가능케 한다.</li>
+        <li><b>AI 시대 재해석:</b> 모델은 사람–AI가 공유하는 <b>구조화된 맥락</b>이다. 자연어 프롬프트만으로는 일관성이 무너진다. 도메인 모델·경계 컨텍스트(DDD)는 에이전트의 환각을 줄이는 <em>의미적 앵커</em>다. OOAD는 "AI에게 무엇을 어떻게 알려줄 것인가"의 토대다.</li>
+      </ul>
+
+      <h3 id="cbd">2.4 CBD — 조립식 재사용</h3>
+      <p>컴포넌트 기반 개발은 잘 정의된 인터페이스를 통해 교체·조립 가능한 컴포넌트로 시스템을 구성한다. 계약(contract)과 인터페이스가 핵심이며, 재사용으로 생산성과 품질을 높인다.</p>
+      <ul class="body">
+        <li><b>핵심 가치:</b> 명확한 <em>인터페이스/계약</em>과 느슨한 결합 → 독립적 개발·테스트·교체.</li>
+        <li><b>AI 시대 재해석:</b> 이것이 바로 Paca의 <b>WASM 플러그인 · MCP 서버 · 역량 기반 권한</b> 모델이다. 에이전트와 도구는 "계약된 인터페이스를 통해 조립되는 컴포넌트"다. CBD의 계약 사고는 <em>에이전트 상호운용성과 신뢰 경계</em>의 이론적 기반이 된다.</li>
+      </ul>
+
+      <h3 id="spl">2.5 SPL — 변동성의 체계적 관리</h3>
+      <p>소프트웨어 프로덕트 라인은 <b>공통 핵심 자산(core assets)</b>을 구축하고 <b>변동점(variability)</b>을 체계적으로 관리해 제품군을 효율적으로 생산한다. 도메인 공학(자산 구축)과 응용 공학(자산으로 제품 조립)의 이원 구조, 피처 모델이 핵심이다.</p>
+      <ul class="body">
+        <li><b>핵심 가치:</b> 무엇이 공통이고 무엇이 가변인지 명시 → 체계적 <em>대량 맞춤(mass customization)</em>.</li>
+        <li><b>AI 시대 재해석:</b> ① <b>프롬프트·스킬·에이전트 자체가 핵심 자산</b>이 된다(재사용 가능한 <code>skills/</code>, <code>/paca</code> 명령). ② 프로젝트별 <em>구성(config) 주도</em> 워크플로는 SPL의 변동성 관리 그 자체다. SPL은 "AI 협업 자산을 어떻게 조직 전반에서 재사용·표준화할 것인가"의 청사진이다.</li>
+      </ul>
+
+      <h3 id="compare">2.6 비교 정리 — 무엇을 계승할 것인가</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>방법론</th><th>핵심 가치</th><th>고전적 한계</th><th>AI 협업으로의 재해석(계승할 유전자)</th></tr></thead>
+          <tbody>
+            <tr><td><b>Waterfall</b></td><td>예측성·문서화</td><td>변화 취약·늦은 피드백</td><td>단계 게이트는 <span class="pill a">AI 승인 게이트</span>로 부활</td></tr>
+            <tr><td><b>Agile/Scrum</b></td><td>적응·반복·사람</td><td>문서·아키텍처 경시 경향</td><td>Paca의 골격 — <span class="pill g">반복·자기조직화</span></td></tr>
+            <tr><td><b>RUP</b></td><td>반복+아키텍처 규율</td><td>무겁고 형식적</td><td>AI가 비용을 낮춤 → <span class="pill g">저비용 규율·SDD</span></td></tr>
+            <tr><td><b>OOAD</b></td><td>도메인 모델·책임</td><td>모델–코드 괴리</td><td>모델 = <span class="pill g">AI의 의미적 앵커</span></td></tr>
+            <tr><td><b>CBD</b></td><td>인터페이스·재사용</td><td>조립 복잡도·통합 비용</td><td>MCP·플러그인 = <span class="pill g">에이전트 계약</span></td></tr>
+            <tr><td><b>SPL</b></td><td>핵심자산·변동성</td><td>초기 투자 큼</td><td>스킬·프롬프트 = <span class="pill g">재사용 핵심자산</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 3. 정립 ===================== -->
+    <section id="converge">
+      <h2><span class="num">3</span>수렴 — AI-협업 시대의 방법론 정립</h2>
+      <p class="lead">이제 종합한다. Paca가 보여준 문제 위에, 네 방법론의 유전자를 이식하여 내재화할 방법론의 골격을 세운다.</p>
+
+      <h3 id="genes">3.1 유전자 통합 매핑</h3>
+      <p>각 전통이 인간–AI 협업에 기여하는 "유전자"를 한 축에, 그것이 해결하는 협업 난제를 다른 축에 둔다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>협업 난제</th><th>기여 방법론</th><th>구체적 메커니즘</th></tr></thead>
+          <tbody>
+            <tr><td>에이전트가 맥락 없이 국소적으로만 옳다</td><td>RUP · OOAD</td><td>안정화된 아키텍처(SDD) + 도메인 모델을 맥락으로 주입</td></tr>
+            <tr><td>사람·AI가 요구를 다르게 이해한다</td><td>BDD · OOAD</td><td>실행 가능한 명세(Gherkin) + 도메인 모델 = 공통 언어</td></tr>
+            <tr><td>에이전트/도구를 안전하게 결합해야 한다</td><td>CBD</td><td>계약된 인터페이스(MCP) + 역량 기반 권한(WASM)</td></tr>
+            <tr><td>협업 자산을 조직 전반에 재사용해야 한다</td><td>SPL</td><td>스킬·프롬프트·구성을 핵심자산화, 변동점 관리</td></tr>
+            <tr><td>변화에 빠르게 적응해야 한다</td><td>Agile · PDCA</td><td>짧은 반복(P-A-C-A) + 회고 기반 개선</td></tr>
+            <tr><td>AI 산출물을 신뢰할 수 있어야 한다</td><td>RUP(V&amp;V) · Waterfall(게이트)</td><td>인간 승인 게이트 + 자동 검증(Check)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="framework">3.2 제안 프레임워크 — 증강 반복 모델(AID)</h3>
+      <p>이 종합을 <b>AID(Augmented Iterative Delivery, 증강 반복 전달)</b>로 명명해 제안한다. 이름은 출발점일 뿐이며, 조직이 자기 언어로 재명명하는 것이 내재화에 더 이롭다. AID는 <b>P-A-C-A를 리듬으로</b>, 네 방법론을 <b>각 국면의 규율</b>로 배치한다.</p>
+      <figure>
+        <div class="svgbox">
+          <svg viewBox="0 0 760 330" role="img" aria-label="AID 프레임워크 계층 구조">
+            <g font-family="inherit">
+              <rect x="30" y="24" width="700" height="52" rx="12" fill="#3b5bdb"/>
+              <text x="380" y="49" text-anchor="middle" fill="#fff" font-size="15" font-weight="800">리듬 — P-A-C-A 반복 (Plan · Act · Check · Adapt)</text>
+              <text x="380" y="67" text-anchor="middle" fill="#dbe4ff" font-size="11.5">Agile/Scrum + PDCA + Cynefin</text>
+
+              <rect x="30" y="92" width="700" height="60" rx="12" fill="none" stroke="#6741d9" stroke-width="2"/>
+              <text x="46" y="116" fill="#6741d9" font-size="13" font-weight="800">규율 계층</text>
+              <g font-size="11.5" fill="#4a5468">
+                <rect x="180" y="100" width="125" height="44" rx="9" fill="#eef1f6"/><text x="242" y="120" text-anchor="middle" font-weight="700" fill="#6741d9">RUP</text><text x="242" y="136" text-anchor="middle">아키텍처·반복</text>
+                <rect x="315" y="100" width="125" height="44" rx="9" fill="#eef1f6"/><text x="377" y="120" text-anchor="middle" font-weight="700" fill="#6741d9">OOAD</text><text x="377" y="136" text-anchor="middle">도메인 모델</text>
+                <rect x="450" y="100" width="125" height="44" rx="9" fill="#eef1f6"/><text x="512" y="120" text-anchor="middle" font-weight="700" fill="#6741d9">CBD</text><text x="512" y="136" text-anchor="middle">계약·조립</text>
+                <rect x="585" y="100" width="130" height="44" rx="9" fill="#eef1f6"/><text x="650" y="120" text-anchor="middle" font-weight="700" fill="#6741d9">SPL</text><text x="650" y="136" text-anchor="middle">자산·변동성</text>
+              </g>
+
+              <rect x="30" y="168" width="700" height="60" rx="12" fill="none" stroke="#0c8599" stroke-width="2"/>
+              <text x="46" y="192" fill="#0c8599" font-size="13" font-weight="800">산출물 계층</text>
+              <g font-size="11.5" fill="#4a5468">
+                <rect x="180" y="176" width="165" height="44" rx="9" fill="#e3fafc"/><text x="262" y="196" text-anchor="middle" font-weight="700" fill="#0c8599">Living Spec</text><text x="262" y="212" text-anchor="middle">BDD + SDD 공동저작</text>
+                <rect x="355" y="176" width="165" height="44" rx="9" fill="#e3fafc"/><text x="437" y="196" text-anchor="middle" font-weight="700" fill="#0c8599">Traceability</text><text x="437" y="212" text-anchor="middle">요구↔코드↔검증</text>
+                <rect x="530" y="176" width="185" height="44" rx="9" fill="#e3fafc"/><text x="622" y="196" text-anchor="middle" font-weight="700" fill="#0c8599">Audit Trail</text><text x="622" y="212" text-anchor="middle">Activity Diff·증적</text>
+              </g>
+
+              <rect x="30" y="244" width="700" height="60" rx="12" fill="none" stroke="#2b8a3e" stroke-width="2"/>
+              <text x="46" y="268" fill="#2b8a3e" font-size="13" font-weight="800">거버넌스 계층</text>
+              <g font-size="11.5" fill="#4a5468">
+                <rect x="200" y="252" width="160" height="44" rx="9" fill="#ebfbee"/><text x="280" y="272" text-anchor="middle" font-weight="700" fill="#2b8a3e">Human Gate</text><text x="280" y="288" text-anchor="middle">승인·책임 고정</text>
+                <rect x="370" y="252" width="160" height="44" rx="9" fill="#ebfbee"/><text x="450" y="272" text-anchor="middle" font-weight="700" fill="#2b8a3e">Trust Boundary</text><text x="450" y="288" text-anchor="middle">샌드박스·최소권한</text>
+                <rect x="540" y="252" width="160" height="44" rx="9" fill="#ebfbee"/><text x="620" y="272" text-anchor="middle" font-weight="700" fill="#2b8a3e">Quality Gate</text><text x="620" y="288" text-anchor="middle">V&amp;V·정량지표</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <figcaption>그림 3. AID 프레임워크 — P-A-C-A 리듬 위에 규율·산출물·거버넌스 3계층</figcaption>
+      </figure>
+      <p>네 계층의 분업이 핵심이다. <b>리듬</b>은 속도를, <b>규율</b>은 방향을, <b>산출물</b>은 진실의 원천을, <b>거버넌스</b>는 신뢰를 책임진다. AI는 네 계층 모두에서 일하지만, 거버넌스 계층의 <em>최종 승인은 항상 인간</em>이다.</p>
+
+      <h4 id="aid-principles">설계 원칙 — 일곱 가지 약속</h4>
+      <p>AID는 다음 일곱 원칙 위에 선다. 원칙이 서로 충돌할 때의 우선순위는 <b>거버넌스 &gt; 산출물 &gt; 규율 &gt; 리듬</b> — 즉 속도보다 신뢰가 언제나 앞선다.</p>
+      <div class="grid c2">
+        <div class="card"><div class="tag">원칙 1</div><h4>인간 책임 불가침</h4><p>실행·자문은 AI에 위임하되 <b>최종 책임(Accountable)은 인간</b>에 고정한다. 모든 AI 산출에는 1:1로 귀속되는 인간 승인자가 있다.</p></div>
+        <div class="card"><div class="tag">원칙 2</div><h4>명세는 살아있다</h4><p>BDD·SDD를 사람·AI 공동 편집 <b>단일 진실 원천</b>으로 둔다. 문서는 사후 산출물이 아니라 협업의 매개체다.</p></div>
+        <div class="card"><div class="tag">원칙 3</div><h4>저비용 규율</h4><p>AI가 모델·문서·테스트의 생성 비용을 낮춘다. "규율은 무겁다"는 전제를 버리고 <b>규율을 싸게 회복</b>한다.</p></div>
+        <div class="card"><div class="tag">원칙 4</div><h4>맥락 우선</h4><p>SDD·도메인 모델 없는 에이전트 투입을 금지한다. <b>맥락이 환각을 막는다.</b></p></div>
+        <div class="card"><div class="tag">원칙 5</div><h4>계약된 협업</h4><p>에이전트·도구는 명시된 인터페이스(MCP)와 역량 권한으로만 결합한다. <b>신뢰는 계약에서</b> 나온다.</p></div>
+        <div class="card"><div class="tag">원칙 6</div><h4>재사용 자산화</h4><p>스킬·프롬프트·구성을 핵심자산으로 관리한다. 일회성 프롬프트가 아니라 <b>조직 자산</b>으로.</p></div>
+        <div class="card"><div class="tag">원칙 7</div><h4>측정으로 통제</h4><p>게이트·프로세스를 정량 지표로 통제·개선한다. <b>측정되지 않으면 성숙하지 않는다.</b></p></div>
+      </div>
+
+      <h4 id="aid-layers">4계층 상세 해부</h4>
+      <p>각 계층의 목적·구성·AI 역할·뿌리, 그리고 그 계층이 무너졌을 때의 증상을 정리한다. 결핍 증상은 도입 시 <em>진단 신호</em>로 그대로 쓸 수 있다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>계층</th><th>목적</th><th>핵심 구성</th><th>AI의 역할</th><th>계승한 뿌리</th><th>결핍 시 증상</th></tr></thead>
+          <tbody>
+            <tr><td><b>리듬</b><br><span class="muted">Rhythm</span></td><td>변화에 적응하는 짧은 피드백 루프</td><td>P-A-C-A 반복, 스프린트, 회고</td><td>작업 수행·상태 갱신·진행 가시화</td><td>Agile·Scrum·PDCA·Cynefin</td><td>빅뱅 통합, 늦은 피드백, 적응 실패</td></tr>
+            <tr><td><b>규율</b><br><span class="muted">Discipline</span></td><td>속도에 방향과 일관성 부여</td><td>SDD, 도메인 모델, 인터페이스 계약, 자산</td><td>대안 설계 탐색·모델 초안·계약 준수 코드</td><td>RUP·OOAD·CBD·SPL</td><td>국소적으로만 옳은 코드, 표류, 중복</td></tr>
+            <tr><td><b>산출물</b><br><span class="muted">Artifacts</span></td><td>진실의 단일 원천과 추적성</td><td>Living Spec(BDD+SDD), 추적성, 감사추적</td><td>명세 공동저작·링크 유지·이력 생성</td><td>BDD·형상관리</td><td>명세–코드 괴리, 증적 부재, 영향분석 불가</td></tr>
+            <tr><td><b>거버넌스</b><br><span class="muted">Governance</span></td><td>신뢰·책임·안전 보장</td><td>인간 게이트, 신뢰 경계, 품질 게이트</td><td>1차 자동검증·정책 점검(승인은 인간)</td><td>V&amp;V·보안공학·게이트</td><td>검증 안 된 산출 유입, 책임 모호, 침해</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 id="aid-operating">운영 모델 — 계층 × P-A-C-A</h4>
+      <p>네 계층은 매 국면마다 동시에 작동한다. 아래 행렬은 "각 계층이 각 국면에서 무엇을 하는가"를 한눈에 보여준다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>계층 ＼ 국면</th><th>Plan</th><th>Act</th><th>Check</th><th>Adapt</th></tr></thead>
+          <tbody>
+            <tr><td><b>리듬</b></td><td>스프린트 목표 합의</td><td>작업 수행·동기화</td><td>데모·리뷰</td><td>회고·백로그 재정렬</td></tr>
+            <tr><td><b>규율</b></td><td>SDD·모델로 범위 정의</td><td>계약·모델 준수 구현</td><td>아키텍처 적합성 점검</td><td>설계 부채 식별·반영</td></tr>
+            <tr><td><b>산출물</b></td><td>BDD 시나리오 작성</td><td>코드↔명세 링크 유지</td><td>추적성·커버리지 확인</td><td>명세 갱신·기준선화</td></tr>
+            <tr><td><b>거버넌스</b></td><td>권한·역할 설정</td><td>샌드박스 격리 실행</td><td>인간 승인 게이트</td><td>지표 검토·기준 조정</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure>
+        <div class="svgbox">
+          <svg viewBox="0 0 820 280" role="img" aria-label="AID 단일 이터레이션 데이터 흐름">
+            <defs>
+              <marker id="iA" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L6.5,3 L0,6 z" fill="#9aa4b8"/>
+              </marker>
+              <marker id="iAr" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L6.5,3 L0,6 z" fill="#e8a33d"/>
+              </marker>
+            </defs>
+            <!-- phase bands -->
+            <g font-family="inherit">
+              <rect x="12" y="10" width="206" height="30" rx="8" fill="#edf0ff"/><text x="115" y="30" text-anchor="middle" fill="#3b5bdb" font-size="12" font-weight="800">PLAN</text>
+              <rect x="222" y="10" width="160" height="30" rx="8" fill="#f3effd"/><text x="302" y="30" text-anchor="middle" fill="#6741d9" font-size="12" font-weight="800">ACT</text>
+              <rect x="386" y="10" width="252" height="30" rx="8" fill="#e6fcff"/><text x="512" y="30" text-anchor="middle" fill="#0c8599" font-size="12" font-weight="800">CHECK</text>
+              <rect x="642" y="10" width="166" height="30" rx="8" fill="#ebfbee"/><text x="725" y="30" text-anchor="middle" fill="#2b8a3e" font-size="12" font-weight="800">ADAPT</text>
+            </g>
+            <!-- edges -->
+            <g fill="none" stroke="#9aa4b8" stroke-width="2" marker-end="url(#iA)">
+              <path d="M108,133 L118,133"/>
+              <path d="M212,133 L234,133"/>
+              <path d="M344,133 L404,133"/>
+              <path d="M504,133 L510,133"/>
+              <path d="M590,133 L654,133"/>
+            </g>
+            <text x="624" y="124" text-anchor="middle" fill="#2b8a3e" font-size="10.5" font-weight="700">통과</text>
+            <path d="M548,108 C 548,66 360,66 290,107" fill="none" stroke="#e8a33d" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#iAr)"/>
+            <text x="430" y="60" text-anchor="middle" fill="#c98a2b" font-size="10.5" font-weight="700">반려 → 재작업</text>
+            <path d="M704,156 C 704,238 120,238 66,156" fill="none" stroke="#748ffc" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#iA)"/>
+            <text x="400" y="234" text-anchor="middle" fill="#5c7cfa" font-size="10.5" font-weight="700">학습 환류 → 다음 백로그</text>
+            <!-- nodes -->
+            <g font-family="inherit" font-size="12" font-weight="700">
+              <g><rect x="24" y="110" width="84" height="46" rx="9" fill="#fff" stroke="#3b5bdb" stroke-width="1.6"/><text x="66" y="130" text-anchor="middle" fill="#1c2330">Backlog</text><text x="66" y="146" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">우선순위</text></g>
+              <g><rect x="118" y="110" width="94" height="46" rx="9" fill="#fff" stroke="#3b5bdb" stroke-width="1.6"/><text x="165" y="129" text-anchor="middle" fill="#1c2330">BDD·SDD</text><text x="165" y="145" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">인간+AI</text></g>
+              <g><rect x="234" y="110" width="110" height="46" rx="9" fill="#fff" stroke="#6741d9" stroke-width="1.6"/><text x="289" y="129" text-anchor="middle" fill="#1c2330">Code·Sandbox</text><text x="289" y="145" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">AI 1차 생성</text></g>
+              <g><rect x="404" y="110" width="100" height="46" rx="9" fill="#fff" stroke="#0c8599" stroke-width="1.6"/><text x="454" y="129" text-anchor="middle" fill="#1c2330">Auto-Verify</text><text x="454" y="145" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">테스트·정적분석</text></g>
+              <g><path d="M548,107 L590,133 L548,159 L506,133 Z" fill="#fff" stroke="#0c8599" stroke-width="1.6"/><text x="548" y="130" text-anchor="middle" fill="#1c2330" font-size="10.5">Human</text><text x="548" y="143" text-anchor="middle" fill="#0c8599" font-size="9.5">Gate</text></g>
+              <g><rect x="654" y="110" width="104" height="46" rx="9" fill="#fff" stroke="#2b8a3e" stroke-width="1.6"/><text x="706" y="129" text-anchor="middle" fill="#1c2330">Retro·릴리스</text><text x="706" y="145" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">인간+AI</text></g>
+            </g>
+          </svg>
+        </div>
+        <figcaption>그림 4. AID 단일 이터레이션 데이터 흐름 — 게이트 통과 시 릴리스, 반려 시 Act로 환류, 회고는 학습을 다음 백로그로 되돌린다.</figcaption>
+      </figure>
+
+      <h4 id="aid-vs">기존 프레임워크 대비 AID의 위치</h4>
+      <p>AID는 무에서 나온 것이 아니라, 익숙한 프레임워크들이 다루지 못한 축 — <b>AI를 일급 구성원으로, 산출물을 살아있게, 인증과 정합하게</b> — 을 채운다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>프레임워크</th><th>반복 리듬</th><th>아키텍처 규율</th><th>AI 일급 구성원</th><th>재사용·변동성</th><th>책임·거버넌스</th><th>인증 정합</th></tr></thead>
+          <tbody>
+            <tr><td><b>Scrum</b></td><td><span class="pill g">강</span></td><td><span class="pill b">약</span></td><td><span class="pill b">없음</span></td><td><span class="pill b">약</span></td><td><span class="pill w">팀자율</span></td><td><span class="pill b">약</span></td></tr>
+            <tr><td><b>RUP</b></td><td><span class="pill w">중</span></td><td><span class="pill g">강</span></td><td><span class="pill b">없음</span></td><td><span class="pill w">중</span></td><td><span class="pill g">강</span></td><td><span class="pill g">강</span></td></tr>
+            <tr><td><b>SAFe</b></td><td><span class="pill g">강</span></td><td><span class="pill w">중</span></td><td><span class="pill b">없음</span></td><td><span class="pill w">중</span></td><td><span class="pill g">강</span></td><td><span class="pill w">중</span></td></tr>
+            <tr><td><b>DevOps</b></td><td><span class="pill g">강</span></td><td><span class="pill b">약</span></td><td><span class="pill w">도구수준</span></td><td><span class="pill b">약</span></td><td><span class="pill w">자동화</span></td><td><span class="pill w">중</span></td></tr>
+            <tr><td><b>AID</b></td><td><span class="pill g">강</span></td><td><span class="pill g">강</span></td><td><span class="pill g">강(1급)</span></td><td><span class="pill g">강</span></td><td><span class="pill g">강(인간게이트)</span></td><td><span class="pill g">설계내장</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout insight">
+        <div class="ct">✦ 통찰 — AID는 "교체"가 아니라 "정렬"이다</div>
+        <p>AID는 Scrum이나 DevOps를 버리라 하지 않는다. 오히려 그 리듬 위에 규율·산출물·거버넌스를 <b>정렬</b>한다. 이미 Scrum을 쓰는 조직에게 AID로의 이행은 "추가 의식"이 아니라 "기존 의식의 의미 강화"다 — 데일리는 그대로, 다만 보드 위에 AI가 있고 명세가 살아있을 뿐이다.</p>
+      </div>
+
+      <h3 id="roles">3.3 인간–AI 역할 모델 (RACI 재정의)</h3>
+      <p>가장 시급한 공백은 역할이다. 전통 RACI(Responsible/Accountable/Consulted/Informed)를 AI 협업용으로 다시 쓴다. 핵심 원칙: <strong>Accountable(최종 책임)은 결코 AI에 할당하지 않는다.</strong></p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>활동</th><th>인간(PO/개발자/리드)</th><th>AI 에이전트</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>요구 정의 / 우선순위</td><td><span class="pill a">A</span> 최종 책임</td><td><span class="pill g">C</span> 제안·정련</td><td>가치 판단은 인간</td></tr>
+            <tr><td>BDD 시나리오 작성</td><td><span class="pill a">A/R</span></td><td><span class="pill g">R</span> 공동 저작</td><td>합의 산출물</td></tr>
+            <tr><td>코드 구현</td><td><span class="pill w">C/R</span> 검토·페어</td><td><span class="pill g">R</span> 1차 생성</td><td>샌드박스 실행</td></tr>
+            <tr><td>설계 결정(SDD)</td><td><span class="pill a">A</span></td><td><span class="pill g">C</span> 대안 탐색</td><td>아키텍처는 인간 승인</td></tr>
+            <tr><td>검증/리뷰</td><td><span class="pill a">A</span> 승인 게이트</td><td><span class="pill g">R</span> 자동 검증</td><td>AI가 AI를 1차 검증 가능</td></tr>
+            <tr><td>릴리스 승인</td><td><span class="pill a">A</span> 단독</td><td>—</td><td>책임 소재 명확화</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <div class="ct">⚠ 책임 비대칭 원칙</div>
+        <p>AI는 <b>R(실행)</b>과 <b>C(자문)</b>은 폭넓게 맡을 수 있으나, <b>A(설명·책임)</b>는 원칙적으로 인간만이 가진다. 이 비대칭이 무너지면 인증·법적·윤리적 책임 추적이 불가능해진다. 자동화의 유혹이 가장 큰 지점이자, 가장 단단히 지켜야 할 선이다.</p>
+      </div>
+
+      <h3 id="artifacts">3.4 산출물과 추적성 — Living Spec</h3>
+      <p>AID의 산출물 철학은 하나의 문장으로 압축된다: <strong>"명세를 살아있게, 추적을 자동으로."</strong> BDD(행위 명세)와 SDD(설계 명세)를 사람과 AI가 공동 편집하는 <b>단일 진실 원천(Single Source of Truth)</b>으로 둔다. 그러면 세 가지가 동시에 풀린다.</p>
+      <ol class="body">
+        <li><b>협업:</b> 사람과 AI가 같은 문서를 읽고 쓴다 → 맥락 공유, 환각 감소.</li>
+        <li><b>추적성:</b> 요구(BDD) ↔ 설계(SDD) ↔ 코드 ↔ 테스트가 링크된다 → 변경 영향 분석.</li>
+        <li><b>증적:</b> Activity Diff가 "누가/언제/무엇을/왜" 바꿨는지 자동 기록 → 인증 증적(Part 4).</li>
+      </ol>
+      <figure>
+        <div class="tbl-wrap">
+          <table class="mx">
+            <thead><tr><th class="rh">요구 (BDD 시나리오)</th><th>설계<br><span class="muted" style="font-weight:500">SDD</span></th><th>코드</th><th>단위<br>테스트</th><th>BDD</th><th>증적</th><th>커버리지</th></tr></thead>
+            <tbody>
+              <tr><td class="rh"><b>R1</b> 로그인·인증<span class="art">→ D1 인증모듈 · auth.go</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="pill g">100%</span></td></tr>
+              <tr><td class="rh"><b>R2</b> 결제 처리<span class="art">→ D1 결제모듈 · payment.go</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="pill g">100%</span></td></tr>
+              <tr><td class="rh"><b>R3</b> 상품 검색<span class="art">→ D2 검색모듈 · search.go</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx part">~</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="pill w">75%</span></td></tr>
+              <tr><td class="rh"><b>R4</b> <span class="muted">[비기능]</span> 보안·감사<span class="art">→ 공통 관심사(cross-cutting)</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx on">✓</span></td><td><span class="cbx off">✗</span></td><td><span class="cbx off">✗</span></td><td><span class="cbx on">✓</span></td><td><span class="pill b">40%</span></td></tr>
+            </tbody>
+            <tfoot><tr><td class="rh"><b>추적 완전성</b></td><td colspan="5" style="text-align:left; color:var(--fg-soft)">완전 추적 2 · 부분 1 · <b style="color:var(--bad)">갭 1</b> &nbsp;→&nbsp; 미해결 추적은 다음 백로그로</td><td><span class="pill w">79%</span></td></tr></tfoot>
+          </table>
+        </div>
+        <p class="muted" style="text-align:center; margin:10px 0 0">
+          <span class="cbx on" style="width:18px;height:18px">✓</span> 추적됨 &nbsp;·&nbsp;
+          <span class="cbx part" style="width:18px;height:18px">~</span> 부분 &nbsp;·&nbsp;
+          <span class="cbx off" style="width:18px;height:18px">✗</span> 미추적(갭)
+        </p>
+        <figcaption>그림 5. 추적성 매트릭스(체크박스 격자) — 행=요구, 열=산출물 단계. 한 칸의 공백이 곧 추적 갭이다. 비기능 요구 R4는 단위테스트·BDD가 비어 갭으로 자동 노출된다.</figcaption>
+      </figure>
+      <p>이 구조의 힘은 <b>양방향성</b>에 있다. 위에서 아래로는 "이 요구가 구현·검증되었는가"(커버리지)를, 아래에서 위로는 "이 코드가 어떤 요구에서 비롯됐는가"(정당성)를 추적한다. 에이전트가 코드를 바꾸면 연결된 BDD·테스트·SDD가 자동으로 영향 표시되고, 그 변경 이력은 증적으로 쌓인다 — 협업·품질·인증이 같은 자료구조 위에서 동시에 해결되는 지점이다.</p>
+      <div class="callout warn">
+        <div class="ct">⚠ 매트릭스가 드러낸 갭</div>
+        <p>위 예시에서 <b>R4(보안·감사 비기능 요구)</b>는 단위테스트·BDD 시나리오가 비어 있다. 추적성 매트릭스의 가치는 바로 이 <em>공백을 자동으로 가시화</em>하는 데 있다 — AI가 코드를 빠르게 늘릴수록, "무엇이 검증되지 않았는가"를 드러내는 이 격자가 품질의 안전망이 된다. 빈 칸은 그대로 다음 스프린트의 작업 항목이 된다.</p>
+      </div>
+
+      <h3 id="governance">3.5 거버넌스와 검증</h3>
+      <p>AI가 생산성을 높일수록 <em>검증되지 않은 산출물의 양</em>도 늘어난다. 거버넌스는 이 위험을 흡수하는 장치다.</p>
+      <div class="grid c2">
+        <div class="card"><div class="tag">신뢰 경계</div><h4>Trust Boundary</h4><p>에이전트는 격리 샌드박스(OpenHands)에서 실행, 도구는 역량 기반 최소권한(WASM)으로 결합. CBD의 계약 사고가 보안 경계를 정의한다.</p></div>
+        <div class="card"><div class="tag">품질 게이트</div><h4>Quality Gate</h4><p>자동 검증(테스트·정적분석·정책)을 통과한 뒤 <b>인간 승인</b>. 정량 지표(결함률·재작업률·리드타임)로 게이트 기준을 객관화.</p></div>
+        <div class="card"><div class="tag">다중 검증</div><h4>AI-검증-AI + 인간</h4><p>한 에이전트의 산출을 다른 에이전트가 적대적으로 검토(refute), 최종은 인간. 단일 모델 편향을 줄인다.</p></div>
+        <div class="card"><div class="tag">공급망</div><h4>Skill/Plugin 신뢰</h4><p>스킬·플러그인·프롬프트도 공급망이다. 출처·서명·권한 범위를 관리(SPL의 자산 거버넌스 + 보안).</p></div>
+      </div>
+
+      <h3 id="aidlc">3.6 AID와 AI-DLC — 산업 표준과의 접속</h3>
+      <p>AID는 고립된 제안이 아니다. 업계도 같은 방향으로 움직이고 있다. AWS는 2025년 <b>AI-DLC(AI-Driven Development Lifecycle, AI 주도 개발 라이프사이클)</b>를 발표했다 — <em>네 가지 기반 가치와 일곱 가지 실천</em>으로 구성된 AI-네이티브 개발 방법론이다. 흥미롭게도 AI-DLC와 AID는 서로 독립적으로 거의 같은 결론에 도달했다. 이 <strong>수렴</strong> 자체가 방향의 정당성을 뒷받침한다.</p>
+      <div class="callout info">
+        <div class="ct">◇ AI-DLC 한눈에</div>
+        <p><b>3단계</b> — <b>Inception</b>(교차기능 팀의 mob elaboration으로 요구·맥락을 적재하고 작은 작업 단위로 계획) → <b>Construction</b>(AI 에이전트가 계획·코드·테스트·인프라 구성을 생성, 인간이 <em>검증·승인한 뒤</em> 진행) → <b>Operations</b>(배포·운영·피드백). 핵심 원리는 "<b>AI가 전 과정을 오케스트레이션하되, 실행 전 인간이 검증·승인</b>"하며, 개발자의 역할은 코드 작성에서 <em>AI 산출물의 관리·검증</em>으로 이동한다. AWS는 적응형 워크플로를 오픈소스로 공개했다.</p>
+      </div>
+      <p>두 접근의 공통 결론은 명확하다: ① AI가 산출을 오케스트레이션하고 ② 인간이 검증·승인하며 ③ 작업을 작은 단위로 쪼개고 ④ 맥락을 먼저 적재한다. 이는 AID의 <b>인간 책임 불가침·맥락 우선·Human Gate</b> 원칙과 정확히 겹친다.</p>
+
+      <h4>AI-DLC 단계 ↔ AID(P-A-C-A · 4계층) 매핑</h4>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>AI-DLC 단계</th><th>핵심 활동</th><th>AID 대응 (리듬 + 계층)</th></tr></thead>
+          <tbody>
+            <tr><td><b>Inception</b></td><td>mob elaboration, 요구·맥락 적재, 인수기준·위험 매핑, 작은 단위 계획</td><td><b>Plan</b> + 규율(SDD·도메인 모델) + 산출물(BDD)</td></tr>
+            <tr><td><b>Construction</b></td><td>AI가 계획·코드·테스트·IaC 생성 → 인간 검증·승인 후 진행</td><td><b>Act</b> + <b>Check</b> + 거버넌스(Human Gate)</td></tr>
+            <tr><td><b>Operations</b></td><td>배포·운영·피드백 반영</td><td><b>Adapt</b> + 거버넌스(정량 측정)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure>
+        <div class="svgbox">
+          <svg viewBox="0 0 820 300" role="img" aria-label="AI-DLC 단계와 AID 매핑 다이어그램">
+            <defs>
+              <marker id="mA" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L6.5,3 L0,6 z" fill="#9aa4b8"/>
+              </marker>
+            </defs>
+            <g font-family="inherit" font-size="11" font-weight="800">
+              <text x="20" y="40" fill="#3b5bdb">AI-DLC 단계 (AWS)</text>
+              <text x="20" y="134" fill="#6741d9">AID 리듬 — P-A-C-A</text>
+              <text x="20" y="216" fill="#0c8599">정합 포인트 — 산출물 · 거버넌스</text>
+            </g>
+            <!-- connectors -->
+            <g fill="none" stroke="#9aa4b8" stroke-width="2" marker-end="url(#mA)">
+              <path d="M112,98 L112,138"/>
+              <path d="M340,98 L290,138"/>
+              <path d="M432,98 L462,138"/>
+              <path d="M684,98 L684,138"/>
+              <path d="M112,188 L112,220"/>
+              <path d="M286,188 L286,220"/>
+              <path d="M464,188 L464,220"/>
+              <path d="M684,188 L684,220"/>
+            </g>
+            <!-- Row 1: AI-DLC -->
+            <g font-family="inherit" font-weight="700">
+              <g><rect x="20" y="46" width="185" height="52" rx="10" fill="#3b5bdb"/><text x="112" y="70" text-anchor="middle" fill="#fff" font-size="13">Inception</text><text x="112" y="87" text-anchor="middle" fill="#dbe4ff" font-size="10" font-weight="500">요구·맥락 적재</text></g>
+              <g><rect x="213" y="46" width="347" height="52" rx="10" fill="#6741d9"/><text x="386" y="70" text-anchor="middle" fill="#fff" font-size="13">Construction</text><text x="386" y="87" text-anchor="middle" fill="#e5dbff" font-size="10" font-weight="500">AI 생성 → 인간 검증·승인</text></g>
+              <g><rect x="568" y="46" width="232" height="52" rx="10" fill="#2b8a3e"/><text x="684" y="70" text-anchor="middle" fill="#fff" font-size="13">Operations</text><text x="684" y="87" text-anchor="middle" fill="#d3f9d8" font-size="10" font-weight="500">운영·피드백</text></g>
+            </g>
+            <!-- Row 2: P-A-C-A -->
+            <g font-family="inherit" font-weight="700" font-size="12.5">
+              <g><rect x="20" y="140" width="185" height="48" rx="9" fill="#edf0ff" stroke="#3b5bdb" stroke-width="1.4"/><text x="112" y="169" text-anchor="middle" fill="#1c2330">Plan</text></g>
+              <g><rect x="213" y="140" width="147" height="48" rx="9" fill="#f3effd" stroke="#6741d9" stroke-width="1.4"/><text x="286" y="169" text-anchor="middle" fill="#1c2330">Act</text></g>
+              <g><rect x="368" y="140" width="192" height="48" rx="9" fill="#e6fcff" stroke="#0c8599" stroke-width="1.4"/><text x="464" y="169" text-anchor="middle" fill="#1c2330">Check</text></g>
+              <g><rect x="568" y="140" width="232" height="48" rx="9" fill="#ebfbee" stroke="#2b8a3e" stroke-width="1.4"/><text x="684" y="169" text-anchor="middle" fill="#1c2330">Adapt</text></g>
+            </g>
+            <!-- Row 3: 정합 포인트 -->
+            <g font-family="inherit" font-weight="700" font-size="10.5">
+              <g><rect x="20" y="222" width="185" height="52" rx="9" fill="#fff" stroke="#3b5bdb" stroke-width="1.4"/><text x="112" y="244" text-anchor="middle" fill="#1c2330">맥락 적재</text><text x="112" y="260" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">BDD·SDD 작성</text></g>
+              <g><rect x="213" y="222" width="147" height="52" rx="9" fill="#fff" stroke="#6741d9" stroke-width="1.4"/><text x="286" y="244" text-anchor="middle" fill="#1c2330">AI 생성</text><text x="286" y="260" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">샌드박스 실행</text></g>
+              <g><rect x="368" y="222" width="192" height="52" rx="9" fill="#fff5f5" stroke="#c92a2a" stroke-width="2.2"/><text x="464" y="244" text-anchor="middle" fill="#c92a2a">Human Gate</text><text x="464" y="260" text-anchor="middle" fill="#a13030" font-size="9" font-weight="600">검증·승인 (책임 고정)</text></g>
+              <g><rect x="568" y="222" width="232" height="52" rx="9" fill="#fff" stroke="#2b8a3e" stroke-width="1.4"/><text x="684" y="244" text-anchor="middle" fill="#1c2330">정량 측정</text><text x="684" y="260" text-anchor="middle" fill="#7a8499" font-size="9" font-weight="500">회고·개선</text></g>
+            </g>
+          </svg>
+        </div>
+        <figcaption>그림 6. AI-DLC ↔ AID 매핑 — AI-DLC의 3단계가 AID의 P-A-C-A 리듬과 정합 포인트(맥락 적재 · Human Gate · 정량 측정)에 대응한다. Construction은 Act와 Check 둘로 갈라지며, 그 분기점에 <b>인간 승인 게이트</b>가 놓인다.</figcaption>
+      </figure>
+
+      <h4>AID와 AI-DLC — 무엇이 같고 무엇이 다른가</h4>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>항목</th><th>AI-DLC (AWS)</th><th>AID (본 백서)</th></tr></thead>
+          <tbody>
+            <tr><td>성격</td><td>산업 레퍼런스 라이프사이클</td><td>조직 <b>내재화</b> 프레임워크</td></tr>
+            <tr><td>구조</td><td>3단계 + 4가치 + 7실천</td><td>P-A-C-A + 7원칙 + 4계층</td></tr>
+            <tr><td>AI 역할</td><td>전 과정 오케스트레이션</td><td>4계층 전반의 R·C 수행</td></tr>
+            <tr><td>인간 역할</td><td>검증·승인, 전략 통제</td><td><b>A(책임) 고정</b>, 승인 게이트</td></tr>
+            <tr><td>대표 산출물</td><td>계획·코드·테스트·IaC</td><td><b>Living Spec</b>(BDD+SDD)·추적성</td></tr>
+            <tr><td>고전 방법론</td><td>암묵적</td><td>RUP·OOAD·CBD·SPL <b>명시 흡수</b></td></tr>
+            <tr><td>인증 정합</td><td>비명시</td><td>CMMI·SP <b>설계 내장</b></td></tr>
+            <tr><td>강점</td><td>실행·툴체인(Kiro 등)</td><td>규율·추적성·인증·거버넌스</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>AI-DLC 7실천 ↔ AID 7원칙 (1:1 대조)</h4>
+      <p>AI-DLC의 네 가지 <b>기반 가치</b>는 — ① 고립된 해법보다 <em>인간–AI 협업</em>, ② 개인의 탁월함보다 <em>집단 지성</em>, ③ 분석 마비보다 <em>신속한 정보기반 결정</em>, ④ 개발 속도보다 <em>비즈니스 임팩트</em> — 이다. 이를 떠받치는 대표 실천을 AID의 일곱 원칙과 1:1로 대응하면 다음과 같다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>AI-DLC 실천 (대표)</th><th>요지</th><th>AID 원칙</th></tr></thead>
+          <tbody>
+            <tr><td><b>Human-in-the-Loop · 승인 게이트</b></td><td>중대한 결정은 AI가 인간에게 유보, 인간이 단계마다 검증·승인</td><td>원칙 1 · <b>인간 책임 불가침</b></td></tr>
+            <tr><td><b>Persistent Context 관리</b></td><td>계획·요구·설계 산출물을 저장소에 지속 보존</td><td>원칙 2 · <b>명세는 살아있다</b></td></tr>
+            <tr><td><b>AI-Powered Execution</b></td><td>AI가 상세 작업계획·코드·테스트를 체계적으로 생성</td><td>원칙 3 · <b>저비용 규율</b></td></tr>
+            <tr><td><b>Mob Elaboration</b></td><td>요구를 검증 가능한 완료기준이 될 때까지 정련·맥락화</td><td>원칙 4 · <b>맥락 우선</b></td></tr>
+            <tr><td><b>Mob Construction</b></td><td>아키텍처·도메인 모델을 팀 실시간 협업으로 확정</td><td>원칙 5 · <b>계약된 협업</b></td></tr>
+            <tr><td><b>Decompose — Units → Bolts</b></td><td>의도를 작은 작업단위(Unit)·짧은 주기(Bolt)로 분해·재구성</td><td>원칙 6 · <b>재사용 자산화</b></td></tr>
+            <tr><td><b>Business Impact 우선</b></td><td>개발 속도가 아니라 비즈니스 성과로 의사결정</td><td>원칙 7 · <b>측정으로 통제</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">※ AI-DLC의 실천 명칭은 AWS·커뮤니티 자료마다 표기가 다소 다르다. 위는 핵심 개념을 대표 실천으로 정리해 AID 원칙과 1:1 대응시킨 것이며, 두 체계가 독립적으로 <b>같은 구조에 수렴</b>함을 보여준다.</p>
+
+      <div class="callout key">
+        <div class="ct">⬡ 권고 — 경쟁이 아니라 보완</div>
+        <p>AI-DLC를 <b>실천 레퍼런스(WHAT·WHEN)</b>로 채택하고, AID의 <b>규율·산출물·거버넌스·인증 정합(HOW·WHY)</b>으로 보강하라. AI-DLC의 Inception/Construction/Operations는 그대로 AID의 P-A-C-A 위에 얹히며, AI-DLC가 비워 둔 <em>고전 방법론의 규율과 CMMI·SP 인증 정합</em>을 AID가 채운다. 즉 <strong>AI-DLC는 골격, AID는 그 골격에 규율·추적성·책임·인증을 입히는 내재화 전략</strong>이다.</p>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 4. 인증 정합성 ===================== -->
+    <section id="cert">
+      <h2><span class="num">4</span>인증·프로세스 성숙도 정합성 — CMMI &amp; SP인증</h2>
+      <p class="lead">방법론이 조직에 내재화되어 <em>신뢰받으려면</em>, 외부 검증 체계와 정합해야 한다. 글로벌 표준 CMMI와 한국의 SP인증을 기준으로, AID가 부합하기 위한 요건과 현실을 짚는다.</p>
+
+      <h3 id="cmmi">4.1 CMMI v3.0 개요</h3>
+      <p>CMMI(Capability Maturity Model Integration)는 프로세스 성숙도를 평가·개선하는 글로벌 모델이다. v3.0이 2023년 4월 발표되어 2024년부터 심사에 적용된다. <b>성숙도(Maturity) 5단계</b>(조직 전반)와 <b>역량(Capability) 0~3단계</b>(개별 영역)를 구분한다.</p>
+      <div class="ladder">
+        <div class="rung"><div class="lv lv0">L1<small>Initial</small></div><div><h4>Initial — 초기</h4><p>임기응변. 영웅적 개인에 의존, 예측 불가.</p></div></div>
+        <div class="rung"><div class="lv lv1">L2<small>Managed</small></div><div><h4>Managed — 관리</h4><p>프로젝트 차원에서 계획·추적·관리. 기본 프로세스 수립.</p></div></div>
+        <div class="rung"><div class="lv lv2">L3<small>Defined</small></div><div><h4>Defined — 정의</h4><p>조직 표준 프로세스 정의, 프로젝트가 이를 테일러링.</p></div></div>
+        <div class="rung"><div class="lv lv3">L4<small>Quant.</small></div><div><h4>Quantitatively Managed — 정량 관리</h4><p>통계적·정량적 데이터로 프로세스 성과를 통제.</p></div></div>
+        <div class="rung"><div class="lv lv4">L5<small>Optimizing</small></div><div><h4>Optimizing — 최적화</h4><p>데이터 기반 지속 개선·혁신.</p></div></div>
+      </div>
+      <p>v3.0은 <b>Data Management·Data Quality·Workforce Empowerment</b> 등 신규 실천 영역을 도입했고, 별도의 <b>CMMI AIM(Artificial Intelligence Maturity)</b> 모델로 AI 실천의 성숙 경로를 제시한다 — 인증 체계가 AI를 포섭하기 시작했다는 신호다.</p>
+
+      <h3 id="sp">4.2 한국 SP인증 개요</h3>
+      <p><b>SP인증(소프트웨어 프로세스 품질인증)</b>은 「소프트웨어진흥법」(구 소프트웨어산업진흥법 제23조)에 근거하여, 국내 SW 기업의 개발 단계별 작업 절차·산출물 관리 역량을 평가·인증하는 제도다. 주관·인증기관은 <b>NIPA(정보통신산업진흥원)</b>이다. 공공 SW 사업 입찰 시 가점 등 실질적 효용이 있어 국내 SW 기업에 중요하다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>등급</th><th>의미</th><th>핵심</th></tr></thead>
+          <tbody>
+            <tr><td><b>1등급</b></td><td>기초 — 프로세스 인식 수준</td><td>개별 활동 존재(초기 단계)</td></tr>
+            <tr><td><b>2등급</b></td><td>프로젝트 차원의 프로세스가 수립되어 프로젝트를 통제·수행</td><td><span class="pill a">프로젝트 통제</span> 성공적 수행 역량</td></tr>
+            <tr><td><b>3등급</b></td><td>조직 차원 프로세스 정의 + 정량 데이터 관리로 일관된 품질·지속 개선</td><td><span class="pill g">조직 표준 + 정량 관리</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="cert-map">4.3 등급 매핑 — SP ↔ CMMI ↔ AID 성숙도</h3>
+      <p>두 체계는 계보가 다르지만(SP는 CMMI·ISO 15504의 영향을 받음) 성숙의 결은 닮았다. 본 백서의 AID 성숙도(Part 5)와 함께 정렬하면 다음과 같다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>성격</th><th>CMMI</th><th>SP인증</th><th>AID 성숙도(제안)</th></tr></thead>
+          <tbody>
+            <tr><td>임기응변</td><td>L1 Initial</td><td>(미인증/1등급)</td><td>Lv0 — AI 임의 사용</td></tr>
+            <tr><td>프로젝트 관리</td><td>L2 Managed</td><td>2등급</td><td>Lv1~2 — 보조/협업 정착</td></tr>
+            <tr><td>조직 표준화</td><td>L3 Defined</td><td>3등급</td><td>Lv3 — 통합·표준화</td></tr>
+            <tr><td>정량 관리</td><td>L4 Quantitatively Managed</td><td>3등급(정량 요소)</td><td>Lv3~4 — 측정 기반 게이트</td></tr>
+            <tr><td>지속 최적화</td><td>L5 Optimizing</td><td>—</td><td>Lv4 — 데이터 기반 개선</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">※ 매핑은 개념적 정렬이며 공식 동등성(equivalence)을 의미하지 않는다. 실제 심사 기준은 각 기관 공식 문서를 따른다.</p>
+
+      <h3 id="cert-fit">4.4 AID가 인증에 부합하기 위한 필요사항</h3>
+      <p>좋은 소식은, AID의 산출물·거버넌스 계층이 인증 요구와 <em>구조적으로 정렬</em>된다는 점이다. 인증이 요구하는 것을 AID가 자연히 생성한다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>인증 요구(공통)</th><th>CMMI/SP 대응 영역</th><th>AID에서의 충족 메커니즘</th><th>추가로 갖춰야 할 것</th></tr></thead>
+          <tbody>
+            <tr><td>프로세스 정의·문서화</td><td>조직 표준 프로세스(L3/3등급)</td><td>Config 주도 워크플로 = process-as-config, 버전 관리</td><td>프로세스를 <b>명시 문서</b>로 승격(암묵→명시)</td></tr>
+            <tr><td>요구–산출물 추적성</td><td>요구관리·형상관리</td><td>Living Spec(BDD↔SDD↔코드↔테스트 링크)</td><td>추적 매트릭스 자동 생성·보존</td></tr>
+            <tr><td>변경·형상 관리</td><td>형상관리(CM)</td><td>Activity Diff &amp; Revert = 변경 이력</td><td>기준선(baseline)·승인 흐름 정식화</td></tr>
+            <tr><td>검증·확인(V&amp;V)</td><td>검증/확인 PA</td><td>자동 검증 + 인간 승인 게이트</td><td>AI 산출물 <b>검토 기록</b> 보존(누가 승인했나)</td></tr>
+            <tr><td>정량적 관리</td><td>측정·분석(L4)</td><td>리드타임·결함·재작업률 등 지표 수집</td><td>프로세스 성과 기준선·통계적 통제</td></tr>
+            <tr><td>인력 역량</td><td>Workforce Empowerment(v3)</td><td>스킬·프롬프트 자산화(SPL)</td><td>AI 리터러시·역할 교육 체계</td></tr>
+            <tr><td>위험·공급망 관리</td><td>위험관리·공급자 관리</td><td>샌드박스·역량 권한·플러그인 출처 관리</td><td>에이전트/모델/스킬 <b>공급망 통제</b> 정책</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout key">
+        <div class="ct">⬡ 핵심 — "증적의 자동화"</div>
+        <p>전통적으로 CMMI·SP 인증의 가장 큰 비용은 <b>증적(evidence) 작성과 유지</b>였다. AID에서는 협업의 부산물로 증적이 자동 생성된다(Activity Diff=변경이력, Living Spec=추적성, 게이트 로그=검토기록). 즉 <strong>AI 협업을 제대로 하면 인증이 가까워지고, 인증을 의식하면 협업이 단단해지는 선순환</strong>이 가능하다.</p>
+      </div>
+
+      <h4>SP인증 심사영역 상세 정합 (2 · 3등급)</h4>
+      <p>SP인증은 <b>2등급(프로젝트 차원 — 프로젝트관리·개발·테스트)</b>과 <b>3등급(조직 차원 — 조직관리·프로세스개선)</b>으로 심사영역이 나뉜다. 아래는 각 등급의 대표 프로세스 영역을 AID 메커니즘 및 CMMI 실천영역과 정합한 것이다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>등급 · 영역</th><th>SP 대표 프로세스 영역</th><th>AID 충족 메커니즘</th><th>CMMI 대응(예시)</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="8"><b>2등급</b><br><span class="muted">프로젝트<br>차원</span></td><td><b>[관리]</b> 제안·계약·착수 관리</td><td>백로그·스프린트 목표 합의, 권한·역할 설정</td><td>PP · PMC</td></tr>
+            <tr><td><b>[관리]</b> 프로젝트 계획·통제(추적)</td><td>P-A-C-A 리듬, 진행 가시화, 지표 추적</td><td>PP · PMC</td></tr>
+            <tr><td><b>[관리]</b> 위험 관리</td><td>맥락 우선 · 다중 검증 · 게이트로 위험 흡수</td><td>RSKM</td></tr>
+            <tr><td><b>[관리]</b> 외주·공급자 관리</td><td><span class="pill a">에이전트·플러그인·모델 공급망 통제</span> (서명·출처·권한)</td><td>SAM</td></tr>
+            <tr><td><b>[관리]</b> 형상 관리</td><td>Activity Diff · 기준선(Baseline) · 승인 흐름</td><td>CM</td></tr>
+            <tr><td><b>[관리]</b> 품질보증 · 측정·분석</td><td>Quality Gate + KPI(리드타임·재작업·결함)</td><td>PPQA · MA</td></tr>
+            <tr><td><b>[개발]</b> 요구개발·관리 / 설계 / 구현</td><td>BDD·Living Spec / SDD·도메인 모델 / 계약(CBD) 준수 AI 코드</td><td>RD · REQM · TS</td></tr>
+            <tr><td><b>[테스트]</b> 검증(시험) · 확인(인수·인도)</td><td>Auto-Verify(V&amp;V) + Human Gate 승인</td><td>VER · VAL</td></tr>
+            <tr><td rowspan="4"><b>3등급</b><br><span class="muted">조직<br>차원</span></td><td><b>[조직]</b> 조직 표준 프로세스 정의</td><td>process-as-config 표준화, 테일러링 규칙</td><td>OPD</td></tr>
+            <tr><td><b>[조직]</b> 교육·훈련 (인력 역량)</td><td>AI 리터러시·역할 교육 (SPL 자산화)</td><td>OT · WE(v3)</td></tr>
+            <tr><td><b>[개선]</b> 정량적 프로젝트·프로세스 관리</td><td>정량 게이트 · 기준선 · 통계적 통제 (Lv4)</td><td>QPM · OPP</td></tr>
+            <tr><td><b>[개선]</b> 조직 프로세스 개선</td><td>Adapt(회고) · 지표 기반 개선 루프</td><td>OPM</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">※ SP 심사영역 범주(2등급: 프로젝트관리·개발·테스트 / 3등급: 조직관리·프로세스개선)는 공식 자료 기준이며, 세부 프로세스 영역명과 CMMI 매핑은 이해를 돕기 위한 대표 예시다. 실제 심사 항목·기준은 NIPA 공식 SP 심사모델을 따른다.</p>
+
+      <h3 id="cert-real">4.5 현실성 통찰 — 인증 체계의 공백과 방향</h3>
+      <p>그러나 낙관만으로는 위험하다. 현행 인증 체계는 <b>인간 행위자를 전제</b>로 설계되었고, AI 행위자가 일급 구성원이 되는 순간 다음 공백이 드러난다.</p>
+      <div class="grid c2">
+        <div class="card"><div class="tag" style="color:var(--bad)">공백 1</div><h4>행위자 평가의 공백</h4><p>심사는 "사람이 프로세스를 따랐는가"를 본다. 작업의 상당 부분을 AI가 수행하면, <em>역량(competency) 평가의 대상</em>이 모호해진다. AI의 산출 품질을 조직 역량으로 인정할지에 대한 기준이 아직 없다.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">공백 2</div><h4>증적 자동화의 양날</h4><p>증적이 자동 생성되면 <em>형식 요건은 쉽게 충족</em>되지만, "검증되지 않은 자동 생성물"이 증적을 채울 위험이 있다. <b>증적의 양 ≠ 프로세스의 질.</b> 심사가 형식에 속을 수 있다.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">공백 3</div><h4>책임 소재의 모호성</h4><p>결함이 AI 산출에서 비롯됐을 때 책임은 누구에게? 인증은 책임 주체를 전제하나, AI는 책임 주체가 될 수 없다. <b>승인자=책임자</b> 원칙의 제도적 명문화가 필요하다.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">공백 4</div><h4>제도 진화의 시차</h4><p>CMMI AIM처럼 표준도 움직이지만, SP인증 등 국내 제도가 AI 협업을 명시 반영하기까지는 시차가 있다. 그 사이 조직은 <em>자체 기준</em>으로 공백을 메워야 한다.</p></div>
+      </div>
+      <div class="callout insight">
+        <div class="ct">✦ 현실적 방향</div>
+        <p><b>① 하이브리드 증적:</b> 자동 증적(기계)을 인정하되, 핵심 게이트마다 <em>인간 검토 서명</em>을 의무화해 "검증된 증적"으로 만든다. <b>② 책임의 명문화:</b> 모든 AI 산출에 승인자(인간)를 1:1로 귀속하는 정책을 프로세스에 박는다(4.4의 RACI). <b>③ 표준 추종 + 선제 내재화:</b> CMMI AIM·국내 가이드라인을 모니터링하되, 제도 시차를 자체 성숙도 모델(Part 5)로 선제 대응한다. <b>④ 형식 함정 경계:</b> 심사용 지표는 "증적의 양"이 아니라 "재작업률·결함누출·게이트 통과율" 같은 <em>결과 품질</em>로 정의한다.</p>
+      </div>
+      <p>요컨대 인증은 AID의 <em>적</em>이 아니라 <em>정렬 대상</em>이다. AID는 인증을 위해 만드는 것이 아니라, 제대로 만들면 인증에 수렴한다. 다만 인증이 AI 시대를 따라잡기 전까지, 그 간극은 <strong>조직의 책임 설계</strong>로 메워야 한다.</p>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 5. 내재화 로드맵 ===================== -->
+    <section id="roadmap">
+      <h2><span class="num">5</span>내재화 로드맵</h2>
+      <p class="lead">방법론은 선언이 아니라 습관이 될 때 내재화된다. 한 번에 도약하지 말고, 측정 가능한 단계로 올라간다.</p>
+
+      <h3 id="maturity">5.1 AID 성숙도 모델 (Lv0–Lv4)</h3>
+      <div class="ladder">
+        <div class="rung"><div class="lv lv0">Lv0<small>Ad-hoc</small></div><div><h4>임의 사용</h4><p>개인이 AI를 임의로 사용. 프로세스·기록 없음. CMMI L1에 대응.</p></div></div>
+        <div class="rung"><div class="lv lv1">Lv1<small>Assisted</small></div><div><h4>보조 도입</h4><p>AI를 코드·문서 보조로 도입. 인간이 모든 것을 검토. 게이트는 비공식.</p></div></div>
+        <div class="rung"><div class="lv lv2">Lv2<small>Collab</small></div><div><h4>협업 정착</h4><p>P-A-C-A 리듬 정착, BDD/SDD 공동 저작, RACI 명문화. 프로젝트 차원 프로세스(≈SP 2등급/CMMI L2~3).</p></div></div>
+        <div class="rung"><div class="lv lv3">Lv3<small>Standardized</small></div><div><h4>통합·표준화</h4><p>조직 표준 AID 프로세스, 스킬·프롬프트 자산화(SPL), 추적성·증적 자동화(≈SP 3등급/CMMI L3).</p></div></div>
+        <div class="rung"><div class="lv lv4">Lv4<small>Optimizing</small></div><div><h4>측정 기반 최적화</h4><p>정량 지표로 게이트·프로세스를 통제·개선. 데이터 기반 의사결정(≈CMMI L4~5).</p></div></div>
+      </div>
+
+      <h3 id="checklist">5.2 단계별 도입 체크리스트</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>전환</th><th>핵심 과제</th><th>완료 기준(Exit Criteria)</th></tr></thead>
+          <tbody>
+            <tr><td>Lv0→Lv1</td><td>승인 게이트 정의, 샌드박스 격리, 사용 가이드</td><td>모든 AI 산출이 인간 검토를 거친다</td></tr>
+            <tr><td>Lv1→Lv2</td><td>P-A-C-A 리듬 채택, BDD/SDD 템플릿, RACI 공표</td><td>2개 이상 팀이 협업 리듬을 일상 운용</td></tr>
+            <tr><td>Lv2→Lv3</td><td>조직 표준 프로세스 문서화, 스킬·프롬프트 저장소, 추적성 자동화</td><td>프로세스가 명시 문서로 존재·테일러링됨</td></tr>
+            <tr><td>Lv3→Lv4</td><td>지표 수집 파이프라인, 게이트 기준 정량화, 기준선 설정</td><td>정량 데이터로 프로세스를 통제·개선</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="antipattern">5.3 안티패턴 — 피해야 할 함정</h3>
+      <div class="grid c2">
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"AI에게 책임 위임"</h4><p>승인·책임까지 AI에 넘기면 추적성·인증·신뢰가 동시에 붕괴. A는 항상 인간.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"맥락 없는 자동화"</h4><p>SDD·도메인 모델 없이 에이전트를 풀면 국소적으로만 옳은 코드가 양산됨.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"증적의 양 = 품질"</h4><p>자동 증적을 채우는 데 만족하면 형식만 남고 질이 빈다. 결과 지표로 검증.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"한 번에 Lv4로"</h4><p>측정·표준 없이 도약하면 실패. 성숙도 단계를 건너뛰지 말 것.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"도구 = 방법론"</h4><p>Paca를 깔면 끝이라는 착각. 도구는 그릇, 방법론은 습관.</p></div>
+        <div class="card"><div class="tag" style="color:var(--bad)">✗</div><h4>"공급망 방치"</h4><p>출처 불명 스킬·플러그인·모델을 무검증 사용 → 보안·품질 리스크.</p></div>
+      </div>
+
+      <h3 id="kpi">5.4 KPI와 측정</h3>
+      <p>측정 없는 성숙은 없다. AI 협업의 가치와 위험을 동시에 드러내는 지표를 둔다(특히 Lv3→Lv4의 핵심).</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>범주</th><th>지표</th><th>읽는 법</th></tr></thead>
+          <tbody>
+            <tr><td>흐름</td><td>리드타임, 처리량(throughput)</td><td>협업이 속도를 내는가</td></tr>
+            <tr><td>품질</td><td>결함 누출률, 재작업률(rework)</td><td>AI 산출이 <b>검증되고 있는가</b>(가장 중요)</td></tr>
+            <tr><td>협업</td><td>AI 기여 비율, 인간 수정률(human-edit rate)</td><td>협업의 깊이와 신뢰 수준</td></tr>
+            <tr><td>거버넌스</td><td>게이트 통과율, 미승인 머지 0건</td><td>책임 게이트가 작동하는가</td></tr>
+            <tr><td>자산</td><td>재사용 스킬/프롬프트 수, 재사용률</td><td>SPL적 자산화가 진행되는가</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="roi">5.5 ROI 금액 환산 시나리오</h3>
+      <p>3.6·5.4의 효율 개선을 인건비 기준 금액으로 환산한 <b>예시 시나리오</b>다. 모든 수치는 가정 기반이며 조직 기준선으로 보정해야 한다.</p>
+      <div class="callout info">
+        <div class="ct">◇ 전제 (가정)</div>
+        <p>개발 인력 <b>10명</b>, 인당 fully-loaded 인건비 <b>연 ₩100,000,000</b> → 팀 연 인건비 <b>₩1,000,000,000 (10억)</b>. 전체 공수의 약 <b>30% (≈₩3억)</b>가 재작업·문서·추적성·검증 행정에 소요된다고 가정.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>절감 항목</th><th>산식 (가정)</th><th>연 절감액 (추정)</th></tr></thead>
+          <tbody>
+            <tr><td>재작업·문서·증적 공수 절감</td><td>₩3억 × 30~50%</td><td>₩0.9억 ~ 1.5억</td></tr>
+            <tr><td>처리량 증대 (리드타임 ▼30~50%)</td><td>인력 1~2명분 여력 ≈ ₩1억 × (1~2)</td><td>₩1.0억 ~ 2.0억</td></tr>
+            <tr><td>인증(SP·CMMI) 준비비 절감</td><td>증적·컨설팅 ₩0.5~1억 × 40~60%</td><td>₩0.2억 ~ 0.6억</td></tr>
+            <tr><td><b>연 합계 (추정)</b></td><td>—</td><td><b>약 ₩2.1억 ~ 4.1억</b> <span class="muted">(팀 비용의 21~41%)</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">도입 비용(도구·교육·이행 컨설팅)은 흔히 분기 단위 절감액 이내 → <b>회수 기간 약 1~2분기</b>로 추정. 본 시나리오는 영업·계약이 아닌 <em>내부 계획 수립용</em> 가정이며, 실제 효과는 파일럿의 before/after 기준선으로 검증한다.</p>
+
+      <h3 id="risk">5.6 리스크와 대응</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>리스크</th><th>영향</th><th>대응</th></tr></thead>
+          <tbody>
+            <tr><td>AI 환각·오류 산출</td><td>결함 유입·신뢰 저하</td><td>맥락 주입(SDD)+다중 검증+인간 게이트</td></tr>
+            <tr><td>책임 소재 불명</td><td>법적·인증 리스크</td><td>승인자=책임자 RACI 명문화</td></tr>
+            <tr><td>역량 공동화(deskilling)</td><td>인력 역량 저하</td><td>AI 리터러시 교육, 인간 검토 의무화</td></tr>
+            <tr><td>공급망 침해</td><td>보안·무결성 훼손</td><td>샌드박스·서명·출처관리·최소권한</td></tr>
+            <tr><td>제도 시차</td><td>인증 부적합</td><td>자체 성숙도 모델로 선제 대응, 표준 추종</td></tr>
+            <tr><td>데이터 주권</td><td>유출·규제</td><td>자체 호스팅(Paca)·데이터 거버넌스</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- ===================== 6. 결론 ===================== -->
+    <section id="conclusion">
+      <h2><span class="num">6</span>결론 — 정립과 내재화의 방향</h2>
+      <p class="lead">AI 협업은 방법론의 폐기가 아니라 <strong>종합</strong>을 요구한다. 반세기의 규율을, AI가 낮춘 비용으로 되살릴 기회다.</p>
+      <div class="grid c2">
+        <div class="card"><h4><span class="ic">A</span>분석이 말해준 것</h4><p>Paca는 정답이 아니라 <b>질문의 구체화</b>다. 협업이 흔드는 역할·산출물·검증·거버넌스를 작동하는 형태로 보여줬다. 그 씨앗(Diff·BDD·SDD·샌드박스)을 명시 방법론으로 키워야 한다.</p></div>
+        <div class="card"><h4><span class="ic">B</span>계보가 말해준 것</h4><p>RUP·OOAD·CBD·SPL은 버릴 유산이 아니라 <b>AI 협업의 부품</b>이다. 아키텍처·모델·계약·자산이라는 네 유전자가 협업의 골격을 이룬다.</p></div>
+        <div class="card"><h4><span class="ic">C</span>정립의 형태</h4><p><b>AID</b> — P-A-C-A 리듬 위에 규율·산출물·거버넌스 3계층. 핵심은 <em>Living Spec</em>(살아있는 명세)과 <em>인간 책임 게이트</em>다.</p></div>
+        <div class="card"><h4><span class="ic">D</span>인증과 현실</h4><p>제대로 만든 협업은 CMMI·SP인증에 <b>수렴</b>한다. 다만 제도가 AI를 따라잡기 전까지, 간극은 <em>책임 설계</em>로 메운다.</p></div>
+      </div>
+      <div class="callout key">
+        <div class="ct">⬡ 한 문장으로</div>
+        <p><strong>"고전의 규율을 AI로 저비용 복원하고, 명세를 살아있게 하며, 책임은 사람에게 고정하라 — 그러면 협업·품질·인증이 한 방향으로 정렬된다."</strong></p>
+      </div>
+      <p>다음 실천 한 걸음: ① 현재 성숙도(Lv0–Lv4) 진단 → ② 승인 게이트와 RACI부터 명문화(Lv1) → ③ P-A-C-A 리듬과 Living Spec 정착(Lv2) → ④ 조직 표준화·자산화(Lv3) → ⑤ 정량 측정으로 최적화(Lv4). 도구(Paca)는 이 여정의 좋은 출발점이되, 목적지는 <em>습관이 된 방법론</em>이다.</p>
+    </section>
+
+    <!-- ===================== 부록 A · 용어 사전 ===================== -->
+    <section id="glossary">
+      <h2><span class="num">A</span>부록 A · 용어 사전</h2>
+      <p class="lead">본 백서에 등장하는 핵심 용어를 정리한다. 아래 검색창에 입력하면 즉시 필터링된다.</p>
+      <input id="glossarySearch" class="gloss" type="text" placeholder="용어 검색…  (예: BDD, 변동성, 게이트, CMMI)" aria-label="용어 검색">
+      <p class="muted" style="margin-top:4px">분류 범례 — <span class="pill a">방법론</span> 개발 방법론·프로세스 · <span class="pill g">AI·협업</span> 에이전트 협업 · <span class="pill w">산출물·거버넌스</span> 명세·추적·통제 · <span class="pill b">인증</span> 성숙도·인증</p>
+      <div class="tbl-wrap">
+        <table id="glossaryTable">
+          <thead><tr><th style="min-width:160px">용어</th><th>분류</th><th>정의</th></tr></thead>
+          <tbody>
+            <tr><td><b>AID</b><br><span class="muted">Augmented Iterative Delivery</span></td><td><span class="pill g">AI·협업</span></td><td>본 백서가 제안하는 프레임워크. P-A-C-A 리듬 위에 규율·산출물·거버넌스 3계층을 정렬한다.</td></tr>
+            <tr><td><b>AI-DLC</b><br><span class="muted">AI-Driven Development Lifecycle</span></td><td><span class="pill g">AI·협업</span></td><td>AWS의 AI-네이티브 개발 라이프사이클(2025). 3단계(Inception·Construction·Operations)+4가치+7실천. AID와 수렴하는 산업 레퍼런스.</td></tr>
+            <tr><td><b>Mob Elaboration</b></td><td><span class="pill g">AI·협업</span></td><td>교차기능 팀이 함께 AI와 요구·설계를 정련하는 협업 방식. AI-DLC의 Inception 핵심 활동.</td></tr>
+            <tr><td><b>P-A-C-A</b></td><td><span class="pill g">AI·협업</span></td><td>Plan·Act·Check·Adapt. Paca와 AID가 공유하는 반복 리듬. PDCA·스프린트의 재배치.</td></tr>
+            <tr><td><b>Paca</b></td><td><span class="pill g">AI·협업</span></td><td>AI 에이전트를 스크럼 팀의 일급 구성원으로 두는 오픈소스·자체호스팅 PM 플랫폼.</td></tr>
+            <tr><td><b>AI 에이전트</b><br><span class="muted">AI Agent</span></td><td><span class="pill g">AI·협업</span></td><td>자율적으로 작업을 수행·갱신하는 LLM 기반 행위자. AID에서 R·C는 맡되 A(책임)는 맡지 않는다.</td></tr>
+            <tr><td><b>MCP</b><br><span class="muted">Model Context Protocol</span></td><td><span class="pill g">AI·협업</span></td><td>에이전트가 데이터·도구에 접속하는 표준 인터페이스. CBD의 계약 사고를 구현.</td></tr>
+            <tr><td><b>OpenHands</b></td><td><span class="pill g">AI·협업</span></td><td>격리 샌드박스 컨테이너에서 코드를 실행하는 에이전트 프레임워크.</td></tr>
+            <tr><td><b>Human-in-the-loop</b></td><td><span class="pill g">AI·협업</span></td><td>핵심 결정·승인에 인간이 개입하는 구조.</td></tr>
+            <tr><td><b>RACI</b></td><td><span class="pill g">AI·협업</span></td><td>Responsible·Accountable·Consulted·Informed 역할 매트릭스. AID는 A를 인간에 고정.</td></tr>
+            <tr><td><b>Deskilling</b></td><td><span class="pill g">AI·협업</span></td><td>자동화 의존으로 인력 역량이 공동화되는 현상. AID의 주요 리스크.</td></tr>
+            <tr><td><b>WASM</b><br><span class="muted">WebAssembly</span></td><td><span class="pill g">AI·협업</span></td><td>플러그인을 격리 실행하는 런타임. 역량 기반 권한과 결합.</td></tr>
+            <tr><td><b>역량 기반 보안</b><br><span class="muted">Capability-based</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>권한을 명시적으로 부여하는 최소권한 보안 모델.</td></tr>
+            <tr><td><b>RUP</b><br><span class="muted">Rational Unified Process</span></td><td><span class="pill a">방법론</span></td><td>반복·아키텍처 중심·유스케이스 주도 통합 프로세스. 4단계(Inception/Elaboration/Construction/Transition).</td></tr>
+            <tr><td><b>OOAD</b></td><td><span class="pill a">방법론</span></td><td>객체지향 분석·설계. 문제 영역을 책임 가진 객체로 모델링.</td></tr>
+            <tr><td><b>UML</b></td><td><span class="pill a">방법론</span></td><td>통합 모델링 언어. OOAD의 시각적 표기 표준.</td></tr>
+            <tr><td><b>DDD / Bounded Context</b></td><td><span class="pill a">방법론</span></td><td>도메인 주도 설계. 의미 경계를 나눠 모델 일관성을 유지. AI의 의미적 앵커.</td></tr>
+            <tr><td><b>CBD</b><br><span class="muted">Component-Based Development</span></td><td><span class="pill a">방법론</span></td><td>계약된 인터페이스로 컴포넌트를 조립·재사용하는 개발.</td></tr>
+            <tr><td><b>SPL</b><br><span class="muted">Software Product Line</span></td><td><span class="pill a">방법론</span></td><td>핵심자산+변동성 관리로 제품군을 효율적으로 생산.</td></tr>
+            <tr><td><b>핵심자산</b><br><span class="muted">Core Asset</span></td><td><span class="pill a">방법론</span></td><td>SPL에서 여러 제품이 공유·재사용하는 공통 자산. AID에선 스킬·프롬프트가 이에 해당.</td></tr>
+            <tr><td><b>변동성</b><br><span class="muted">Variability</span></td><td><span class="pill a">방법론</span></td><td>제품 간 달라지는 지점(변동점). 피처 모델로 명시·관리.</td></tr>
+            <tr><td><b>도메인 공학 / 응용 공학</b></td><td><span class="pill a">방법론</span></td><td>재사용 자산을 구축하는 활동 vs 자산으로 개별 제품을 조립하는 활동.</td></tr>
+            <tr><td><b>Agile / Scrum / XP</b></td><td><span class="pill a">방법론</span></td><td>경량·반복·사람 중심 개발. AID 리듬의 뿌리.</td></tr>
+            <tr><td><b>Scrumban</b></td><td><span class="pill a">방법론</span></td><td>스크럼 스프린트와 칸반 흐름을 결합한 방식. Paca 보드의 형태.</td></tr>
+            <tr><td><b>Waterfall</b></td><td><span class="pill a">방법론</span></td><td>순차·문서 중심 단계 모델. 단계 게이트는 AI 승인 게이트로 재해석된다.</td></tr>
+            <tr><td><b>Spiral</b></td><td><span class="pill a">방법론</span></td><td>Boehm의 위험 주도 반복 모델.</td></tr>
+            <tr><td><b>DevOps / CI·CD</b></td><td><span class="pill a">방법론</span></td><td>개발–운영 통합과 지속적 통합·배포로 흐름을 가속.</td></tr>
+            <tr><td><b>PDCA</b></td><td><span class="pill a">방법론</span></td><td>데밍 개선 사이클(Plan-Do-Check-Act). P-A-C-A의 직접적 뿌리.</td></tr>
+            <tr><td><b>Cynefin</b></td><td><span class="pill a">방법론</span></td><td>복잡성 영역을 구분하는 프레임워크. probe–sense–respond(탐색·감지·대응).</td></tr>
+            <tr><td><b>BDD / Gherkin</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>행위 주도 개발. Given-When-Then의 실행 가능한 명세. 인간·AI 공통 언어.</td></tr>
+            <tr><td><b>SDD</b><br><span class="muted">System Design Document</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>살아있는 아키텍처 문서. 에이전트에게 설계 맥락을 제공.</td></tr>
+            <tr><td><b>Living Spec</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>사람·AI가 공동 편집하는 단일 진실 원천 명세(BDD+SDD).</td></tr>
+            <tr><td><b>SSoT</b><br><span class="muted">Single Source of Truth</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>단일 진실 원천. 중복·괴리를 막는 기준점.</td></tr>
+            <tr><td><b>추적성</b><br><span class="muted">Traceability</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>요구↔설계↔코드↔테스트의 연결. 변경 영향 분석의 기반.</td></tr>
+            <tr><td><b>추적성 매트릭스</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>산출물 간 연결 관계를 행렬로 표현한 것(그림 5).</td></tr>
+            <tr><td><b>감사 추적</b><br><span class="muted">Audit Trail</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>"누가·언제·무엇을·왜" 바꿨는지의 기록. Paca의 Activity Diff.</td></tr>
+            <tr><td><b>형상관리 / 기준선</b><br><span class="muted">CM / Baseline</span></td><td><span class="pill w">산출물·거버넌스</span></td><td>산출물의 버전·변경 통제와 승인된 기준판.</td></tr>
+            <tr><td><b>V&amp;V</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>Verification(맞게 만들었나)·Validation(옳은 것을 만들었나).</td></tr>
+            <tr><td><b>Quality Gate</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>정량 기준을 통과해야 다음으로 진행하는 관문.</td></tr>
+            <tr><td><b>Human Gate</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>인간 승인이 필수인 관문. 책임을 인간에 고정한다.</td></tr>
+            <tr><td><b>Trust Boundary</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>신뢰 경계. 샌드박스·권한 분리로 정의.</td></tr>
+            <tr><td><b>Process-as-config</b></td><td><span class="pill w">산출물·거버넌스</span></td><td>프로세스를 코드·구성으로 정의·버전관리. Paca의 config 주도 워크플로.</td></tr>
+            <tr><td><b>CMMI</b></td><td><span class="pill b">인증</span></td><td>프로세스 성숙도 통합 모델. 성숙도 5단계(Initial~Optimizing). v3.0(2023).</td></tr>
+            <tr><td><b>성숙도 단계</b><br><span class="muted">Maturity Level</span></td><td><span class="pill b">인증</span></td><td>조직 전반 프로세스 성숙도(L1~L5).</td></tr>
+            <tr><td><b>역량 단계</b><br><span class="muted">Capability Level</span></td><td><span class="pill b">인증</span></td><td>개별 프로세스 영역의 성숙도(0~3).</td></tr>
+            <tr><td><b>CMMI AIM</b></td><td><span class="pill b">인증</span></td><td>CMMI의 AI 성숙도(Artificial Intelligence Maturity) 모델.</td></tr>
+            <tr><td><b>SP인증</b></td><td><span class="pill b">인증</span></td><td>한국 소프트웨어 프로세스 품질인증. 소프트웨어진흥법 근거, 1~3등급.</td></tr>
+            <tr><td><b>NIPA</b></td><td><span class="pill b">인증</span></td><td>정보통신산업진흥원. SP인증의 주관·인증기관.</td></tr>
+            <tr><td><b>CMM · SW-CMM</b></td><td><span class="pill b">인증</span></td><td>SEI가 1986년부터 발전시킨 능력 성숙도 모델. CMMI·ISO 15504의 공통 뿌리.</td></tr>
+            <tr><td><b>ISO/IEC 15504 · SPICE</b></td><td><span class="pill b">인증</span></td><td>프로세스 평가 국제표준(1998). ISO 12207·CMM·Bootstrap·Trillium에서 파생. CMMI와 양대 평가 모델.</td></tr>
+            <tr><td><b>ISO/IEC 33000</b></td><td><span class="pill b">인증</span></td><td>ISO/IEC 15504의 후속(2015~). 프로세스 평가 개념·용어를 전면 개편.</td></tr>
+            <tr><td><b>ISO/IEC 12207</b></td><td><span class="pill b">인증</span></td><td>소프트웨어 라이프사이클 프로세스 국제표준(1995). SPICE의 토대.</td></tr>
+            <tr><td><b>프로세스 영역 (KPA)</b><br><span class="muted">Process / Practice Area</span></td><td><span class="pill b">인증</span></td><td>인증 심사의 평가 단위. SP 2등급=프로젝트관리·개발·테스트, 3등급=조직관리·프로세스개선. CMMI는 PP·CM·VER 등으로 구성.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 부록 B · SP 2등급 체크리스트 ===================== -->
+    <section id="sp2-checklist">
+      <h2><span class="num">B</span>부록 B · SP 2등급 인증 준비 체크리스트 (산출물)</h2>
+      <p class="lead">SP 2등급(프로젝트 차원)의 대표 산출물을 영역별로 정리하고, AID가 협업의 부산물로 <b>어느 수준까지 자동 생성</b>하는지 표시한다. 빈 곳이 곧 준비 과제다.</p>
+      <p class="muted" style="margin-top:4px">자동화 수준 — <span class="pill g">자동</span> 협업 부산물로 생성 · <span class="pill w">반자동</span> AI 초안+인간 확정 · <span class="pill b">수기</span> 별도 작성 필요</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>영역</th><th>핵심 산출물</th><th>AID 생성 메커니즘</th><th>자동화</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="7"><b>프로젝트<br>관리</b></td><td>사업수행계획서 / 프로젝트 계획서(WBS·일정·자원)</td><td>P-A-C-A 계획 · 백로그 · 스프린트 목표</td><td><span class="pill w">반자동</span></td></tr>
+            <tr><td>위험관리 대장</td><td>맥락 우선 · 다중 검증 · 게이트 로그</td><td><span class="pill w">반자동</span></td></tr>
+            <tr><td>형상관리 계획 · 형상목록 · 변경이력</td><td>Activity Diff · 기준선(Baseline)</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>품질보증 계획 · QA 점검 기록</td><td>Quality Gate 정책 · 통과 로그</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>외주 · 공급자 관리 대장</td><td>에이전트 · 플러그인 · 모델 공급망 목록(서명·권한)</td><td><span class="pill w">반자동</span></td></tr>
+            <tr><td>측정 · 분석 지표 정의 · 실적</td><td>KPI 대시보드(리드타임·재작업·결함)</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>회의록 · 의사결정 기록</td><td>승인 게이트 · Activity 로그</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td rowspan="3"><b>개발</b></td><td>요구사항 명세서 · 요구추적표</td><td>BDD · Living Spec · 추적성 매트릭스</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>아키텍처 · 상세설계서</td><td>SDD · 도메인 모델</td><td><span class="pill w">반자동</span></td></tr>
+            <tr><td>소스코드 · 코드리뷰 기록</td><td>AI 1차 코드 + 인간 리뷰 로그</td><td><span class="pill w">반자동</span></td></tr>
+            <tr><td rowspan="3"><b>테스트</b></td><td>시험계획서 · 시험케이스</td><td>BDD 시나리오 · Auto-Verify</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>시험결과서 · 결함관리 대장</td><td>검증 로그 · 게이트 결과</td><td><span class="pill g">자동</span></td></tr>
+            <tr><td>인수 · 인도 확인서</td><td>Human Gate 승인 기록</td><td><span class="pill w">반자동</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout insight">
+        <div class="ct">✦ 통찰 — 산출물의 절반 이상이 "공짜"로 나온다</div>
+        <p>위 13개 대표 산출물 중 다수가 AID 협업의 <b>부산물로 자동·반자동 생성</b>된다. 인증 준비를 "추가 문서 작업"이 아니라 "<em>이미 만들어진 증적을 정리하는 일</em>"로 바꾸는 것 — 이것이 AID가 SP 2등급 준비 비용을 낮추는 핵심 기전이다(5.5의 ROI 근거).</p>
+      </div>
+      <p class="muted">※ 산출물 명칭·필수 목록·심사 기준은 NIPA 공식 SP 심사모델을 따른다. 위는 준비 착수를 돕는 대표 예시이며, 조직 표준 산출물 정의(템플릿)와 매핑해 사용한다.</p>
+    </section>
+
+    <!-- ===================== 부록 C · 4주 파일럿 플랜 ===================== -->
+    <section id="pilot">
+      <h2><span class="num">C</span>부록 C · 4주 파일럿 도입 플랜 (1개 팀)</h2>
+      <p class="lead">방법론은 한 팀에서 작게 시작해 증거를 만들 때 확산된다. 1개 팀(5~8명)을 대상으로 4주 만에 <b>Lv0/1 → Lv2</b>(P-A-C-A 리듬 + Living Spec + Human Gate 정착) 진입과 ROI 기준선 확보를 목표로 한다.</p>
+      <div class="grid c2">
+        <div class="card"><div class="tag">대상 · 기간</div><h4>1개 팀 · 4주</h4><p>변동성이 크지 않고 의지 있는 팀. 실제 기능 1~2개를 파일럿 백로그로 사용한다.</p></div>
+        <div class="card"><div class="tag">목표</div><h4>Lv2 진입 + 기준선</h4><p>협업 리듬·산출물·게이트 정착 + before/after 지표로 ROI를 검증한다.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>주차</th><th>핵심 활동</th><th>산출물</th><th>완료 기준 (게이트)</th></tr></thead>
+          <tbody>
+            <tr><td><b>Week 1</b><br><span class="muted">기반 세팅</span></td><td>도구 셋업(Paca·MCP·샌드박스), 승인 게이트·RACI 명문화, 현재 기준선 측정(before), SDD 골격 작성</td><td>RACI·게이트 정책, SDD v0, 기준선 지표</td><td>모든 AI 산출이 인간 검토를 거치는 규칙 합의</td></tr>
+            <tr><td><b>Week 2</b><br><span class="muted">협업 리듬</span></td><td>첫 P-A-C-A 사이클, BDD 시나리오 공동 저작, 샌드박스 에이전트로 1차 구현, Human Gate 운영</td><td>BDD 시나리오, 1차 코드·리뷰 로그</td><td>1개 기능이 게이트를 통과해 머지 (미승인 머지 0)</td></tr>
+            <tr><td><b>Week 3</b><br><span class="muted">추적성·증적</span></td><td>Living Spec 추적성 매트릭스 구성, Activity Diff 증적 정리, KPI 수집 자동화</td><td>추적성 매트릭스, 증적 세트, KPI 대시보드</td><td>요구↔코드↔테스트 추적 ≥ 90%, 갭 가시화</td></tr>
+            <tr><td><b>Week 4</b><br><span class="muted">측정·회고·판정</span></td><td>after 지표 측정, ROI 환산, 회고, Lv2 판정·확산 결정</td><td>before/after 비교표, ROI 시나리오, 회고록</td><td>Lv2 기준 충족 + 확산 여부 의사결정</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>측정 계획 (before → after)</h4>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>지표</th><th>Week 1 (before)</th><th>Week 4 (after)</th><th>목표 방향</th></tr></thead>
+          <tbody>
+            <tr><td>기능 리드타임</td><td>기준선 측정</td><td>재측정</td><td><span class="pill g">단축</span></td></tr>
+            <tr><td>재작업률(rework)</td><td>기준선 측정</td><td>재측정</td><td><span class="pill g">감소</span></td></tr>
+            <tr><td>추적성 커버리지</td><td>—</td><td>≥ 90%</td><td><span class="pill g">확보</span></td></tr>
+            <tr><td>미승인 머지</td><td>—</td><td>0건</td><td><span class="pill g">게이트 작동</span></td></tr>
+            <tr><td>인간 수정률(human-edit)</td><td>기준선</td><td>재측정</td><td><span class="pill a">신뢰 추세</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid c2">
+        <div class="card"><div class="tag">성공 기준 (Exit)</div><h4>Lv2 판정</h4><p>P-A-C-A 일상 운용 · BDD/SDD 공동저작 · Human Gate로 미승인 머지 0 · 추적성 ≥ 90% · before/after 지표 개선 확인.</p></div>
+        <div class="card"><div class="tag">안전장치</div><h4>리스크 대응</h4><p>책임은 인간 고정(RACI), 샌드박스 격리, 출처불명 스킬·모델 금지, 회고로 매주 보정. 실패 시 범위 축소 후 재시도.</p></div>
+      </div>
+      <div class="callout key">
+        <div class="ct">⬡ 확산 원칙</div>
+        <p>파일럿의 목적은 "도구 도입"이 아니라 <b>증거 생산</b>이다. 4주 뒤 남는 것은 코드가 아니라 <em>before/after 지표·증적·회고</em> — 이 증거가 다음 팀을 설득하고 Lv3(조직 표준화)로 가는 연료가 된다. 한 팀에서 작동을 증명한 뒤에만 확산하라.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 참고자료 ===================== -->
+    <section id="refs">
+      <h3>참고자료</h3>
+      <ul class="refs">
+        <li><b>Paca (GitHub)</b> — Paca-AI/paca, AI-native 프로젝트 관리 플랫폼: <a href="https://github.com/Paca-AI/paca">github.com/Paca-AI/paca</a></li>
+        <li><b>GeekNews(하다)</b> — 인간과 AI 에이전트 협업을 위한 오픈소스 프로젝트 관리 도구: <a href="https://news.hada.io/topic?id=30901">news.hada.io/topic?id=30901</a></li>
+        <li><b>SP인증포털</b> — SW프로세스 품질인증 제도 소개: <a href="http://www.sp-info.or.kr/">sp-info.or.kr</a></li>
+        <li><b>SWIT 소프트웨어산업정보시스템</b> — SP인증제도 소개: <a href="https://www.swit.or.kr/GOODSW/sp/spIntro.do">swit.or.kr</a></li>
+        <li><b>NIPA(정보통신산업진흥원)</b> — SW프로세스 품질인증(SP) 신청 절차 안내: <a href="https://www.nipa.kr/home/2-8/5462">nipa.kr</a></li>
+        <li><b>ISACA / CMMI</b> — CMMI in the AI Age (2025): <a href="https://www.isaca.org/resources/isaca-journal/issues/2025/volume-3/cmmi-in-the-ai-age">isaca.org</a> · CMMI Institute: <a href="https://cmmiinstitute.com/">cmmiinstitute.com</a></li>
+        <li><b>AWS — AI-DLC</b> — AI-Driven Development Life Cycle: Reimagining Software Engineering: <a href="https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/">aws.amazon.com</a> · 적응형 워크플로 오픈소스: <a href="https://aws.amazon.com/blogs/devops/open-sourcing-adaptive-workflows-for-ai-driven-development-life-cycle-ai-dlc/">aws.amazon.com</a></li>
+        <li><b>인증 표준 계보</b> — ISO/IEC 15504(SPICE) 및 ISO/IEC 33000으로의 진화, CMM/CMMI와의 관계: <a href="https://en.wikipedia.org/wiki/ISO/IEC_15504">en.wikipedia.org/wiki/ISO/IEC_15504</a></li>
+        <li><b>방법론 일반</b> — RUP(Rational Unified Process), OOAD/UML, CBD(Component-Based Development), SPL(Software Product Line, SEI), Agile Manifesto, Deming PDCA, Cynefin.</li>
+      </ul>
+      <div class="callout warn">
+        <div class="ct">⚠ 면책</div>
+        <p>본 백서의 인증 등급 매핑은 개념적 정렬이며 공식 동등성을 의미하지 않는다. 실제 인증 요건·심사 기준은 NIPA(SP인증)·ISACA/CMMI Institute(CMMI)의 공식 최신 문서를 따른다. Paca 관련 서술은 공개 저장소·소개 자료를 근거로 하며, 버전에 따라 달라질 수 있다.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p><b>인간–AI 협업 시대의 소프트웨어 개발 방법론 정립</b> · 기술 백서(종합 심층판) · 2026-06-29<br>
+      Paca 분석 → 고전·RUP·OOAD·CBD·SPL 계보 → AID 정립 → CMMI·SP인증 정합성 → 내재화 로드맵.</p>
+    </footer>
+
+  </div><!-- /content -->
+  </main>
+</div><!-- /wrap -->
+
+<div class="controls">
+  <button class="btn" id="themeBtn" title="테마 전환" aria-label="테마 전환">◐</button>
+  <button class="btn" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+</div>
+
+<script>
+(function(){
+  // 테마 전환 (localStorage 사용하지 않음 — 단일 파일 이식성)
+  var root = document.documentElement;
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    root.setAttribute('data-theme', root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+  });
+
+  // 맨 위로
+  document.getElementById('topBtn').addEventListener('click', function(){
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  // 모바일 목차 토글
+  var toc = document.getElementById('toc');
+  var mt = document.getElementById('menuToggle');
+  mt.addEventListener('click', function(){ toc.classList.toggle('open'); });
+  toc.addEventListener('click', function(e){ if(e.target.tagName==='A') toc.classList.remove('open'); });
+
+  // 읽기 진행 바
+  var bar = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var sc = h.scrollTop || document.body.scrollTop;
+    var max = (h.scrollHeight - h.clientHeight) || 1;
+    bar.style.width = (sc/max*100) + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // 스크롤 스파이 (IntersectionObserver)
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var map = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el) map[id] = a;
+  });
+  var targets = Object.keys(map).map(function(id){ return document.getElementById(id); });
+  var current = null;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        var id = en.target.id;
+        if(current) current.classList.remove('active');
+        if(map[id]){ map[id].classList.add('active'); current = map[id];
+          // 활성 항목이 사이드바에서 보이도록
+          map[id].scrollIntoView({block:'nearest'});
+        }
+      }
+    });
+  }, {rootMargin:'-10% 0px -75% 0px', threshold:0});
+  targets.forEach(function(t){ obs.observe(t); });
+
+  // 용어 사전 실시간 필터
+  var gs = document.getElementById('glossarySearch');
+  if(gs){
+    var grows = Array.prototype.slice.call(document.querySelectorAll('#glossaryTable tbody tr'));
+    gs.addEventListener('input', function(){
+      var q = gs.value.trim().toLowerCase();
+      grows.forEach(function(r){
+        r.style.display = (!q || r.textContent.toLowerCase().indexOf(q) >= 0) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

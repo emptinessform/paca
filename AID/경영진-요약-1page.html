@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인간–AI 협업 개발 방법론 — 경영진 요약 (1-Page Brief)</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#16203a; --soft:#43506b; --mute:#7b8699; --line:#dde3ee;
+    --accent:#2f4bd1; --accent2:#0c8599; --good:#2b8a3e; --warn:#b8860b; --bad:#c92a2a;
+    --soft-bg:#f3f6fc;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Pretendard","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#e9edf5; color:var(--fg); font-family:var(--sans); line-height:1.5; font-size:14px; }
+  .page{ max-width:920px; margin:24px auto; background:var(--bg); padding:30px 36px 26px; border-radius:12px;
+    box-shadow:0 10px 40px rgba(20,30,50,.12); }
+  header{ border-bottom:2px solid var(--accent); padding-bottom:12px; margin-bottom:14px; }
+  .eyebrow{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:800; color:var(--accent); }
+  h1{ font-size:25px; margin:6px 0 4px; letter-spacing:-.01em; line-height:1.18; }
+  .path{ font-size:12.5px; color:var(--mute); font-weight:600; }
+  .essence{ background:var(--soft-bg); border-left:4px solid var(--accent); border-radius:8px; padding:12px 15px; margin:14px 0; font-size:13.5px; color:var(--soft); }
+  .essence b{ color:var(--fg); }
+  h2{ font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--accent); margin:16px 0 8px; font-weight:800; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .kf{ border:1px solid var(--line); border-radius:9px; padding:11px 13px; }
+  .kf h3{ margin:0 0 3px; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .kf .n{ width:22px; height:22px; flex:0 0 auto; border-radius:6px; background:color-mix(in srgb,var(--accent) 13%,transparent); color:var(--accent); font-weight:800; font-size:12px; display:grid; place-items:center; }
+  .kf p{ margin:0; font-size:12.5px; color:var(--soft); }
+  .aid{ display:flex; gap:12px; align-items:center; background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 8%,#fff),#fff); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:6px 0 4px; }
+  .aid .tag{ font-weight:800; color:var(--accent); font-size:18px; flex:0 0 auto; }
+  .aid p{ margin:0; font-size:12.5px; color:var(--soft); }
+  .ladder{ display:flex; gap:6px; margin:8px 0 2px; }
+  .rung{ flex:1; border-radius:7px; padding:7px 8px; color:#fff; font-size:11px; line-height:1.25; }
+  .rung b{ display:block; font-size:12px; }
+  .l0{ background:#868e96; } .l1{ background:#4263eb; } .l2{ background:#6741d9; } .l3{ background:#0c8599; } .l4{ background:#2b8a3e; }
+  .rec{ border:1.5px solid var(--accent); border-radius:10px; padding:13px 15px; margin-top:6px; background:color-mix(in srgb,var(--accent) 5%,#fff); }
+  .rec h2{ margin-top:0; }
+  .rec ul{ margin:0; padding-left:18px; }
+  .rec li{ margin:4px 0; font-size:13px; }
+  .rec li b{ color:var(--accent); }
+  .two{ display:grid; grid-template-columns:1.3fr 1fr; gap:16px; }
+  .steps{ counter-reset:s; list-style:none; padding:0; margin:6px 0 0; }
+  .steps li{ counter-increment:s; position:relative; padding-left:26px; margin:5px 0; font-size:12.5px; color:var(--soft); }
+  .steps li::before{ content:counter(s); position:absolute; left:0; top:1px; width:18px; height:18px; border-radius:50%; background:var(--accent); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center; }
+  .risk{ font-size:12px; color:var(--soft); margin:4px 0 0; }
+  .risk b{ color:var(--bad); }
+  footer{ border-top:1px solid var(--line); margin-top:16px; padding-top:10px; font-size:11.5px; color:var(--mute); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+  .roi{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:6px 0 2px; }
+  .stat{ border:1px solid var(--line); border-radius:9px; padding:9px 8px; text-align:center; background:var(--soft-bg); }
+  .stat .big{ font-size:21px; font-weight:800; color:var(--good); line-height:1.05; letter-spacing:-.01em; }
+  .stat .big small{ font-size:12px; }
+  .stat .lab{ font-size:11px; color:var(--soft); margin-top:2px; }
+  .roi-note{ font-size:10.5px; color:var(--mute); margin:3px 0 0; }
+  .krw{ margin:7px 0 0; padding:8px 12px; border-radius:8px; background:color-mix(in srgb,var(--good) 9%,#fff); border:1px solid color-mix(in srgb,var(--good) 35%,var(--line)); font-size:12px; color:var(--soft); }
+  .krw b.amt{ color:var(--good); font-size:13.5px; }
+  .h2sub{ font-weight:600; text-transform:none; letter-spacing:0; color:var(--mute); font-size:11px; }
+  @media (max-width:680px){ .grid,.two,.roi{ grid-template-columns:1fr 1fr; } .ladder{ flex-wrap:wrap; } }
+  @media print{
+    body{ background:#fff; font-size:9px; line-height:1.38; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .page{ box-shadow:none; margin:0; max-width:none; padding:7mm 9mm; border-radius:0; }
+    @page{ size:A4; margin:0; }
+    header{ padding-bottom:7px; margin-bottom:8px; }
+    .eyebrow{ font-size:9.5px; }
+    h1{ font-size:17px; margin:4px 0 3px; }
+    .path{ font-size:10px; }
+    h2{ margin:7px 0 4px; font-size:11px; }
+    .essence{ margin:7px 0; padding:7px 10px; font-size:10.5px; }
+    .grid{ gap:5px; }
+    .kf,.rec,.aid{ break-inside:avoid; }
+    .kf{ padding:6px 9px; }
+    .kf h3{ font-size:12px; }
+    .kf .n{ width:18px; height:18px; font-size:11px; }
+    .kf p{ font-size:10px; }
+    .aid{ padding:7px 11px; margin:4px 0; }
+    .aid .tag{ font-size:15px; }
+    .aid p{ font-size:10px; }
+    .roi{ gap:6px; margin:4px 0 2px; }
+    .stat{ padding:5px 6px; }
+    .stat .big{ font-size:15px; }
+    .stat .lab{ font-size:9.5px; }
+    .krw{ padding:5px 9px; font-size:9.5px; margin-top:5px; }
+    .krw b.amt{ font-size:11px; }
+    .roi-note{ font-size:8.5px; }
+    .ladder{ gap:4px; margin:5px 0 2px; }
+    .rung{ padding:5px 6px; font-size:9.5px; }
+    .rung b{ font-size:10px; }
+    .two{ gap:11px; }
+    .rec{ padding:8px 11px; }
+    .rec li{ font-size:10px; margin:3px 0; }
+    .steps li{ font-size:9.5px; margin:3px 0; }
+    .risk{ font-size:9px; }
+    footer{ margin-top:8px; padding-top:6px; font-size:9px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Executive Brief · 1 Page</div>
+    <h1>인간–AI 협업 시대의 소프트웨어 개발 방법론</h1>
+    <div class="path">Paca · AI-DLC 분석 → AID 방법론 정립 → CMMI · SP인증 정합 → 내재화 로드맵 &nbsp;|&nbsp; 2026-06-29</div>
+  </header>
+
+  <div class="essence">
+    AI 에이전트가 <b>"도구"에서 "팀원"</b>으로 전환되고 있다. 이는 도구 교체가 아니라 <b>개발 방법론의 재정의</b>를 요구한다.
+    오픈소스 도구 <b>Paca</b>와 AWS의 <b>AI-DLC</b>를 분석하고, 고전 방법론(RUP·OOAD·CBD·SPL)을 흡수해 내재화 프레임워크 <b>AID</b>를 정립했다.
+    한 문장 결론: <b>"고전의 규율을 AI로 저비용 복원하고, 명세를 살아있게 하며, 책임은 사람에게 고정하라 — 그러면 협업·품질·인증이 한 방향으로 정렬된다."</b>
+  </div>
+
+  <h2>핵심 결론 4</h2>
+  <div class="grid">
+    <div class="kf"><h3><span class="n">1</span>흡수하라</h3><p>고전 방법론은 폐기 대상이 아니라 <b>AI 협업의 골격</b>이다. 아키텍처·모델·계약·자산이 협업의 규율이 된다.</p></div>
+    <div class="kf"><h3><span class="n">2</span>살아있는 명세</h3><p>BDD·SDD를 사람·AI 공동 편집 단일 진실 원천으로 — <b>협업·추적성·인증 증적</b>이 동시에 풀린다.</p></div>
+    <div class="kf"><h3><span class="n">3</span>책임은 인간</h3><p>AI는 실행·자문(R·C), <b>최종 승인·책임(A)은 인간 게이트</b>에 고정. 자동화하면 인증·신뢰가 붕괴한다.</p></div>
+    <div class="kf"><h3><span class="n">4</span>인증 수렴</h3><p>제대로 한 협업은 <b>CMMI·SP인증에 수렴</b>한다. 변경이력·추적성·게이트 로그가 증적을 자동 생성한다.</p></div>
+  </div>
+
+  <h2>제안 프레임워크 — AID</h2>
+  <div class="aid">
+    <span class="tag">AID</span>
+    <p><b>P-A-C-A 리듬</b>(Plan·Act·Check·Adapt) 위에 <b>규율 · 산출물 · 거버넌스</b> 3계층을 정렬한다. AWS의 <b>AI-DLC</b>(Inception·Construction·Operations)와 독립적으로 수렴 — 방향이 업계 표준으로 검증되었다. AI-DLC를 <b>실천 레퍼런스</b>로, AID를 <b>내재화·인증 정합 전략</b>으로 결합한다.</p>
+  </div>
+
+  <h2>투자 효익(ROI) 추정 <span class="h2sub">· 가정 기반, 조직 기준선으로 보정</span></h2>
+  <div class="roi">
+    <div class="stat"><div class="big">▼30–50<small>%</small></div><div class="lab">기능 리드타임</div></div>
+    <div class="stat"><div class="big">▼20–35<small>%</small></div><div class="lab">재작업률(rework)</div></div>
+    <div class="stat"><div class="big">▼40–60<small>%</small></div><div class="lab">인증 증적 작성 공수</div></div>
+    <div class="stat"><div class="big">▼25–40<small>%</small></div><div class="lab">결함 누출률</div></div>
+  </div>
+  <div class="krw">시나리오 — 개발 <b>10인</b> 팀(인당 fully-loaded ₩1억/년 = 연 ₩10억) 기준: 재작업·증적 절감 + 처리량 증대 + 인증 준비비 절감 ⇒ <b class="amt">연 약 ₩2.1–4.1억 절감</b>(팀 비용의 21–41%), 회수 1–2분기.</div>
+  <p class="roi-note">전제: 파일럿 팀에 AI 1차 생성 · Living Spec · 자동 증적을 도입한 경우. 수치는 <b>계획 수립용 추정</b>이며 실제 기준선으로 검증·보정한다.</p>
+
+  <h2>성숙도 로드맵</h2>
+  <div class="ladder">
+    <div class="rung l0"><b>Lv0</b>임의 사용</div>
+    <div class="rung l1"><b>Lv1</b>보조 · 게이트</div>
+    <div class="rung l2"><b>Lv2</b>협업 정착</div>
+    <div class="rung l3"><b>Lv3</b>표준화 ≈SP3·CMMI L3</div>
+    <div class="rung l4"><b>Lv4</b>측정 최적화 ≈CMMI L4~5</div>
+  </div>
+
+  <div class="two">
+    <div class="rec">
+      <h2>의사결정 권고</h2>
+      <ul>
+        <li><b>채택</b> — AI-DLC를 실천 레퍼런스로, AID를 내재화 프레임워크로 공식 채택.</li>
+        <li><b>즉시 착수</b> — 승인 게이트 + 인간 책임(RACI) 명문화, Living Spec(BDD·SDD) 도입.</li>
+        <li><b>투자 효익</b> — 증적 자동화로 SP·CMMI 인증 준비 비용 절감 + 품질 안전망 확보.</li>
+        <li><b>거버넌스</b> — 책임 소재 명문화, 스킬·모델 공급망 통제, 역량 공동화 방지 교육.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>다음 5단계</h2>
+      <ol class="steps">
+        <li>현재 성숙도(Lv0–Lv4) 진단</li>
+        <li>승인 게이트 · RACI 명문화 (Lv1)</li>
+        <li>파일럿 팀에 P-A-C-A + Living Spec 정착 (Lv2)</li>
+        <li>조직 표준화 · 스킬/프롬프트 자산화 (Lv3)</li>
+        <li>정량 지표로 게이트·프로세스 최적화 (Lv4)</li>
+      </ol>
+      <p class="risk"><b>핵심 리스크</b> — AI 환각·책임 모호·공급망 침해·제도 시차. 모두 <b>인간 책임 게이트</b>와 <b>자체 성숙도 모델</b>로 흡수.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>전체 근거·다이어그램·용어는 종합 기술 백서 참조: <b>AI협업-SW개발방법론-백서.html</b></span>
+    <span>요약본 1/1</span>
+  </footer>
+</div>
+</body>
+</html>
