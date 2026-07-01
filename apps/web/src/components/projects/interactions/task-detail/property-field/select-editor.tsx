@@ -1,9 +1,10 @@
-import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { OptionListButton } from "./option-list-button";
 import type { SelectOption } from "./types";
 
 export function SelectEditor({
@@ -17,6 +18,7 @@ export function SelectEditor({
 	onChange: (value: string | null) => void;
 	align?: "start" | "end" | "center";
 }) {
+	const { t } = useTranslation("projects");
 	const selectedArr = Array.isArray(value) ? value : value ? [value] : [];
 	const firstSelected = options.find((o) => o.value === selectedArr[0]);
 
@@ -45,7 +47,7 @@ export function SelectEditor({
 						{firstSelected.label}
 					</>
 				) : (
-					"None"
+					t("taskDetail.properties.none")
 				)}
 			</PopoverTrigger>
 			<PopoverContent
@@ -55,23 +57,12 @@ export function SelectEditor({
 				{options.map((opt) => {
 					const isSelected = selectedArr.includes(opt.value);
 					return (
-						<button
+						<OptionListButton
 							key={opt.value}
-							type="button"
-							className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-muted/60 transition-colors duration-100"
+							option={opt}
+							isSelected={isSelected}
 							onClick={() => onChange(isSelected ? null : opt.value)}
-						>
-							{opt.colorDot ? (
-								<span
-									className="size-2 rounded-full shrink-0"
-									style={{ background: opt.colorDot }}
-								/>
-							) : opt.icon ? (
-								<span className="shrink-0">{opt.icon}</span>
-							) : null}
-							<span className="flex-1 text-left">{opt.label}</span>
-							{isSelected && <Check className="size-3.5 text-primary" />}
-						</button>
+						/>
 					);
 				})}
 			</PopoverContent>
